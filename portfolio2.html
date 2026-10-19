@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>個別株 利回り・優待アナライザー</title>
+  <style>
+    :root {
+      --primary: #0f172a;
+      --accent: #2563eb;
+      --success: #16a34a;
+      --danger: #dc2626;
+      --warning: #d97706;
+      --bg: #f8fafc;
+      --card-bg: #ffffff;
+      --border: #e2e8f0;
+      --text: #0f172a;
+      --text-sub: #64748b;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
+    body { background-color: var(--bg); color: var(--text); padding-bottom: 60px; }
+    header { background-color: var(--primary); color: white; padding: 14px 20px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+    header h1 { font-size: 1.1rem; font-weight: bold; }
+    .header-btns { display: flex; gap: 8px; }
+    .btn { cursor: pointer; padding: 7px 14px; border-radius: 6px; font-weight: 600; border: none; font-size: 0.85rem; transition: background 0.2s; }
+    .btn-white { background: white; color: var(--primary); }
+    .btn-primary { background: var(--accent); color: white; }
+    .btn-danger { background: #fee2e2; color: var(--danger); border: 1px solid #fecaca; }
+    .btn-sm { padding: 4px 8px; font-size: 0.75rem; }
+    .container { max-width: 1000px; margin: 16px auto; padding: 0 12px; }
+
+    /* サマリーカード */
+    .dashboard-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; margin-bottom: 20px; }
+    .stat-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; }
+    .stat-card span { font-size: 0.75rem; color: var(--text-sub); display: block; margin-bottom: 4px; }
+    .stat-card strong { font-size: 1.25rem; color: var(--text); display: block; }
+    .stat-card.highlight strong { color: var(--accent); }
+    .stat-card.success strong { color: var(--success); }
+
+    /* テーブル・リスト表示 */
+    .section-title { font-size: 1rem; font-weight: bold; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+    .table-container { background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px; overflow-x: auto; margin-bottom: 24px; }
+    table { width: 100%; border-collapse: collapse; text-align: left; font-size: 0.85rem; min-width: 720px; }
+    th { background: #f1f5f9; padding: 10px 12px; font-weight: 600; color: var(--text-sub); border-bottom: 1px solid var(--border); }
+    td { padding: 12px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+    tr:last-child td { border-bottom: none; }
+    .badge { display: inline-block; padding: 2px 6px; border-radius: 4px; font-size: 0.75rem; font-weight: 600; }
+    .badge-yield { background: #eff6ff; color: #1d4ed8; }
+    .badge-month { background: #fef3c7; color: #b45309; }
+
+    /* モーダル */
+    .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 200; justify-content: center; align-items: center; padding: 16px; }
+    .modal { background: white; border-radius: 10px; padding: 20px; width: 100%; max-width: 520px; max-height: 90vh; overflow-y: auto; }
+    .form-group { margin-bottom: 12px; }
+    .form-group label { display: block; font-size: 0.8rem; font-weight: 600; margin-bottom: 4px; }
+    .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 0.9rem; }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>個別株 利回り・優待アナライザー</h1>
+    <div class="header-btns">
+      <button class="btn btn-white" onclick="openAddModal()">＋ 銘柄追加</button>
+    </div>
+  </header>
+
+  <div class="container">
+    <!-- ダッシュボード -->
+    <div class="dashboard-grid">
+      <div class="stat-card">
+        <span>ポートフォリオ評価額</span>
+        <strong id="totalVal">0 円</strong>
+      </div>
+      <div class="stat-card">
+        <span>含み損益</span>
+        <strong id="totalProfit">0 円</strong>
+      </div>
+      <div class="stat-card highlight">
+        <span>年間予想配当金（税前）</span>
+        <strong id="totalDiv">0 円</strong>
+      </div>
+      <div class="stat-card highlight">
+        <span>年間優待換算額</span>
+        <strong id="totalYutai">0 円</strong>
+      </div>
+      <div class="stat-card success">
+        <span>総合利回り（時価 / 簿価）</span>
+        <strong id="totalYield">0.00% / 0.00%</strong>
+      </div>
+    </div>
+
+    <!-- 保有銘柄一覧 -->
+    <div class="section-title">
+      <span>保有銘柄利回り一覧</span>
+      <span style="font-size: 0.8rem; color: var(--text-sub);" id="stockCount">0 銘柄</span>
+    </div>
+
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th>銘柄</th>
+            <th>保有数 / 取得単価</th>
+            <th>現在値 / 評価損益</th>
+            <th>配当 / 優待利回り</th>
+            <th>総合利回り</th>
+            <th>権利月</th>
+            <th style="text-align: center;">操作</th>
+          </tr>
+        </thead>
+        <tbody id="stockTableBody">
+          <!-- 動的レンダリング -->
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- 銘柄登録モーダル -->
+  <div class="modal-overlay" id="addModal">
+    <div class="modal">
+      <h2 style="font-size: 1.05rem; margin-bottom: 14px;">銘柄の登録・編集</h2>
+      
+      <div class="form-row">
+        <div class="form-group">
+          <label>証券コード（4桁）</label>
+          <input type="text" id="code" placeholder="例: 3197">
+        </div>
+        <div class="form-group">
+          <label>銘柄名</label>
+          <input type="text" id="name" placeholder="例: すかいらーくHD">
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>保有株数</label>
+          <input type="number" id="shares" placeholder="例: 100">
+        </div>
+        <div class="form-group">
+          <label>平均取得単価（円）</label>
+          <input type="number" id="buyPrice" placeholder="例: 2000">
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>現在株価（円）</label>
+          <input type="number" id="currentPrice" placeholder="例: 2350">
+        </div>
+        <div class="form-group">
+          <label>1株あたり年間配当（円）</label>
+          <input type="number" id="dps" placeholder="例: 17">
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>年間優待価値（保有株数分・円）</label>
+          <input type="number" id="yutaiVal" placeholder="例: 4000">
+        </div>
+        <div class="form-group">
+          <label>権利確定月</label>
+          <input type="text" id="recordMonths" placeholder="例: 3月, 9月">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>優待内容メモ</label>
+        <input type="text" id="yutaiDesc" placeholder="例: 飲食割引カード2,000円分×年2回">
+      </div>
+
+      <div style="display: flex; gap: 8px; margin-top: 18px;">
+        <button class="btn" style="background: #e2e8f0; flex: 1;" onclick="closeAddModal()">キャンセル</button>
+        <button class="btn btn-primary" style="flex: 1;" onclick="saveStock()">保存する</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let stockList = JSON.parse(localStorage.getItem('my_stock_portfolio_v1') || '[]');
+
+    function saveToStorage() {
+      localStorage.setItem('my_stock_portfolio_v1', JSON.stringify(stockList));
+      render();
+    }
+
+    function openAddModal() {
+      document.getElementById('code').value = '';
+      document.getElementById('name').value = '';
+      document.getElementById('shares').value = '';
+      document.getElementById('buyPrice').value = '';
+      document.getElementById('currentPrice').value = '';
+      document.getElementById('dps').value = '0';
+      document.getElementById('yutaiVal').value = '0';
+      document.getElementById('recordMonths').value = '';
+      document.getElementById('yutaiDesc').value = '';
+      document.getElementById('addModal').style.display = 'flex';
+    }
+
+    function closeAddModal() {
+      document.getElementById('addModal').style.display = 'none';
+    }
+
+    function saveStock() {
+      const code = document.getElementById('code').value.trim();
+      const name = document.getElementById('name').value.trim();
+      const shares = parseInt(document.getElementById('shares').value, 10);
+      const buyPrice = parseFloat(document.getElementById('buyPrice').value);
+      const currentPrice = parseFloat(document.getElementById('currentPrice').value);
+      const dps = parseFloat(document.getElementById('dps').value) || 0;
+      const yutaiVal = parseFloat(document.getElementById('yutaiVal').value) || 0;
+      const recordMonths = document.getElementById('recordMonths').value.trim();
+      const yutaiDesc = document.getElementById('yutaiDesc').value.trim();
+
+      if (!name || isNaN(shares) || isNaN(buyPrice) || isNaN(currentPrice)) {
+        alert('銘柄名、保有数、取得単価、現在株価を正しく入力してください。');
+        return;
+      }
+
+      stockList.push({
+        id: Date.now().toString(),
+        code,
+        name,
+        shares,
+        buyPrice,
+        currentPrice,
+        dps,
+        yutaiVal,
+        recordMonths,
+        yutaiDesc
+      });
+
+      saveToStorage();
+      closeAddModal();
+    }
+
+    function deleteStock(id) {
+      stockList = stockList.filter(s => s.id !== id);
+      saveToStorage();
+    }
+
+    function render() {
+      const tbody = document.getElementById('stockTableBody');
+      tbody.innerHTML = '';
+
+      let totalCost = 0;
+      let totalCurrentVal = 0;
+      let totalAnnualDiv = 0;
+      let totalAnnualYutai = 0;
+
+      stockList.forEach(item => {
+        const cost = item.shares * item.buyPrice;
+        const currentVal = item.shares * item.currentPrice;
+        const profit = currentVal - cost;
+        const profitRate = cost > 0 ? (profit / cost) * 100 : 0;
+
+        const annualDiv = item.shares * item.dps;
+        const annualYutai = item.yutaiVal;
+        const annualTotalIncome = annualDiv + annualYutai;
+
+        // 利回り計算（時価ベース・簿価ベース）
+        const marketYield = currentVal > 0 ? (annualTotalIncome / currentVal) * 100 : 0;
+        const bookYield = cost > 0 ? (annualTotalIncome / cost) * 100 : 0;
+
+        const divYield = currentVal > 0 ? (annualDiv / currentVal) * 100 : 0;
+        const yutaiYield = currentVal > 0 ? (annualYutai / currentVal) * 100 : 0;
+
+        totalCost += cost;
+        totalCurrentVal += currentVal;
+        totalAnnualDiv += annualDiv;
+        totalAnnualYutai += annualYutai;
+
+        const profitClass = profit >= 0 ? 'color: var(--success);' : 'color: var(--danger);';
+        const sign = profit >= 0 ? '+' : '';
+
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>
+            <strong>${item.name}</strong> <span style="font-size: 0.75rem; color: var(--text-sub);">${item.code}</span>
+            ${item.yutaiDesc ? `<div style="font-size: 0.75rem; color: var(--text-sub); margin-top: 2px;">🎁 ${item.yutaiDesc}</div>` : ''}
+          </td>
+          <td>
+            ${item.shares.toLocaleString()} 株<br>
+            <span style="font-size: 0.75rem; color: var(--text-sub);">@${item.buyPrice.toLocaleString()} 円</span>
+          </td>
+          <td>
+            ${item.currentPrice.toLocaleString()} 円<br>
+            <span style="font-size: 0.75rem; ${profitClass}">
+              ${sign}${profit.toLocaleString()} 円 (${sign}${profitRate.toFixed(2)}%)
+            </span>
+          </td>
+          <td>
+            配当: ${divYield.toFixed(2)}%<br>
+            優待: ${yutaiYield.toFixed(2)}%
+          </td>
+          <td>
+            <span class="badge badge-yield" style="font-size: 0.85rem;">
+              時価: ${marketYield.toFixed(2)}%
+            </span>
+            <div style="font-size: 0.75rem; color: var(--text-sub); margin-top: 2px;">
+              簿価: ${bookYield.toFixed(2)}%
+            </div>
+          </td>
+          <td>
+            ${item.recordMonths ? `<span class="badge badge-month">${item.recordMonths}</span>` : '-'}
+          </td>
+          <td style="text-align: center;">
+            <button class="btn btn-sm btn-danger" onclick="deleteStock('${item.id}')">削除</button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      document.getElementById('stockCount').textContent = stockList.length + ' 銘柄';
+
+      const totalProfit = totalCurrentVal - totalCost;
+      const profitRate = totalCost > 0 ? (totalProfit / totalCost) * 100 : 0;
+      const totalIncome = totalAnnualDiv + totalAnnualYutai;
+      const totalMarketYield = totalCurrentVal > 0 ? (totalIncome / totalCurrentVal) * 100 : 0;
+      const totalBookYield = totalCost > 0 ? (totalIncome / totalCost) * 100 : 0;
+
+      document.getElementById('totalVal').textContent = totalCurrentVal.toLocaleString() + ' 円';
+      
+      const profitEl = document.getElementById('totalProfit');
+      profitEl.textContent = (totalProfit >= 0 ? '+' : '') + totalProfit.toLocaleString() + ' 円 (' + (totalProfit >= 0 ? '+' : '') + profitRate.toFixed(2) + '%)';
+      profitEl.style.color = totalProfit >= 0 ? 'var(--success)' : 'var(--danger)';
+
+      document.getElementById('totalDiv').textContent = totalAnnualDiv.toLocaleString() + ' 円';
+      document.getElementById('totalYutai').textContent = totalAnnualYutai.toLocaleString() + ' 円';
+      document.getElementById('totalYield').textContent = totalMarketYield.toFixed(2) + '% / ' + totalBookYield.toFixed(2) + '%';
+    }
+
+    render();
+  </script>
+</body>
+</html>
