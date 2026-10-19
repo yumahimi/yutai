@@ -10,7 +10,6 @@
       --accent: #2563eb;
       --success: #16a34a;
       --danger: #dc2626;
-      --warning: #d97706;
       --bg: #f8fafc;
       --card-bg: #ffffff;
       --border: #e2e8f0;
@@ -24,12 +23,13 @@
     .header-btns { display: flex; gap: 8px; }
     .btn { cursor: pointer; padding: 7px 14px; border-radius: 6px; font-weight: 600; border: none; font-size: 0.85rem; transition: background 0.2s; }
     .btn-white { background: white; color: var(--primary); }
+    .btn-import { background: #3b82f6; color: white; }
     .btn-primary { background: var(--accent); color: white; }
     .btn-danger { background: #fee2e2; color: var(--danger); border: 1px solid #fecaca; }
     .btn-sm { padding: 4px 8px; font-size: 0.75rem; }
     .container { max-width: 1000px; margin: 16px auto; padding: 0 12px; }
 
-    /* サマリーカード */
+    /* ダッシュボード */
     .dashboard-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; margin-bottom: 20px; }
     .stat-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; }
     .stat-card span { font-size: 0.75rem; color: var(--text-sub); display: block; margin-bottom: 4px; }
@@ -40,7 +40,7 @@
     /* テーブル・リスト表示 */
     .section-title { font-size: 1rem; font-weight: bold; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
     .table-container { background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px; overflow-x: auto; margin-bottom: 24px; }
-    table { width: 100%; border-collapse: collapse; text-align: left; font-size: 0.85rem; min-width: 720px; }
+    table { width: 100%; border-collapse: collapse; text-align: left; font-size: 0.85rem; min-width: 760px; }
     th { background: #f1f5f9; padding: 10px 12px; font-weight: 600; color: var(--text-sub); border-bottom: 1px solid var(--border); }
     td { padding: 12px; border-bottom: 1px solid var(--border); vertical-align: middle; }
     tr:last-child td { border-bottom: none; }
@@ -50,7 +50,7 @@
 
     /* モーダル */
     .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 200; justify-content: center; align-items: center; padding: 16px; }
-    .modal { background: white; border-radius: 10px; padding: 20px; width: 100%; max-width: 520px; max-height: 90vh; overflow-y: auto; }
+    .modal { background: white; border-radius: 10px; padding: 20px; width: 100%; max-width: 560px; max-height: 90vh; overflow-y: auto; }
     .form-group { margin-bottom: 12px; }
     .form-group label { display: block; font-size: 0.8rem; font-weight: 600; margin-bottom: 4px; }
     .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 0.9rem; }
@@ -62,12 +62,12 @@
   <header>
     <h1>個別株 利回り・優待アナライザー</h1>
     <div class="header-btns">
+      <button class="btn btn-import" onclick="openImportModal()">📥 一括取込 (CSV)</button>
       <button class="btn btn-white" onclick="openAddModal()">＋ 銘柄追加</button>
     </div>
   </header>
 
   <div class="container">
-    <!-- ダッシュボード -->
     <div class="dashboard-grid">
       <div class="stat-card">
         <span>ポートフォリオ評価額</span>
@@ -91,10 +91,12 @@
       </div>
     </div>
 
-    <!-- 保有銘柄一覧 -->
     <div class="section-title">
       <span>保有銘柄利回り一覧</span>
-      <span style="font-size: 0.8rem; color: var(--text-sub);" id="stockCount">0 銘柄</span>
+      <div style="display: flex; gap: 10px; align-items: center;">
+        <span style="font-size: 0.8rem; color: var(--text-sub);" id="stockCount">0 銘柄</span>
+        <button class="btn btn-sm btn-danger" onclick="clearAllStocks()">全データ初期化</button>
+      </div>
     </div>
 
     <div class="table-container">
@@ -117,11 +119,41 @@
     </div>
   </div>
 
-  <!-- 銘柄登録モーダル -->
+  <!-- CSV/テキスト一括インポートモーダル -->
+  <div class="modal-overlay" id="importModal">
+    <div class="modal">
+      <h2 style="font-size: 1.05rem; margin-bottom: 10px;">CSV・一覧データの一括取込</h2>
+      <p style="font-size: 0.8rem; color: var(--text-sub); margin-bottom: 12px;">
+        証券会社の保有銘柄一覧CSVファイルを選択するか、下の枠にテキストをそのまま貼り付けてください。
+      </p>
+
+      <div class="form-group">
+        <label>CSVファイルから読込</label>
+        <input type="file" id="csvFileInput" accept=".csv, .txt" onchange="handleFileSelect(this)" style="font-size: 0.85rem;">
+      </div>
+
+      <div class="form-group">
+        <label>または表のテキストを貼り付け</label>
+        <textarea id="importRawText" rows="6" placeholder="銘柄コード, 銘柄名, 保有株数, 取得単価, 現在株価&#10;例:&#10;3197, すかいらーくHD, 100, 2000, 2350&#10;9861, 吉野家HD, 200, 2800, 3100"></textarea>
+      </div>
+
+      <p style="font-size: 0.75rem; color: var(--text-sub); margin-bottom: 16px;">
+        ※カンマ区切り（CSV）またはタブ区切り（Excelからのコピペ）に対応しています。<br>
+        ※取り込み後、各銘柄の配当や優待金額は表から直接追記・編集が可能です。
+      </p>
+
+      <div style="display: flex; gap: 8px;">
+        <button class="btn" style="background: #e2e8f0; flex: 1;" onclick="closeImportModal()">キャンセル</button>
+        <button class="btn btn-primary" style="flex: 1;" onclick="processImport()">取り込む</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 個別登録モーダル -->
   <div class="modal-overlay" id="addModal">
     <div class="modal">
       <h2 style="font-size: 1.05rem; margin-bottom: 14px;">銘柄の登録・編集</h2>
-      
+      <input type="hidden" id="editId">
       <div class="form-row">
         <div class="form-group">
           <label>証券コード（4桁）</label>
@@ -187,6 +219,7 @@
     }
 
     function openAddModal() {
+      document.getElementById('editId').value = '';
       document.getElementById('code').value = '';
       document.getElementById('name').value = '';
       document.getElementById('shares').value = '';
@@ -203,34 +236,142 @@
       document.getElementById('addModal').style.display = 'none';
     }
 
+    function openImportModal() {
+      document.getElementById('csvFileInput').value = '';
+      document.getElementById('importRawText').value = '';
+      document.getElementById('importModal').style.display = 'flex';
+    }
+
+    function closeImportModal() {
+      document.getElementById('importModal').style.display = 'none';
+    }
+
+    function handleFileSelect(input) {
+      const file = input.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        document.getElementById('importRawText').value = e.target.result;
+      };
+      reader.readAsText(file, 'Shift_JIS'); // 証券会社のCSV（Shift_JIS）に対応
+    }
+
+    /* CSV / テキストのパース・取込処理 */
+    function processImport() {
+      const raw = document.getElementById('importRawText').value.trim();
+      if (!raw) {
+        alert('データが入力されていません。');
+        return;
+      }
+
+      const lines = raw.split(/\r?\n/);
+      let importedCount = 0;
+
+      lines.forEach(line => {
+        if (!line.trim()) return;
+        // カンマまたはタブ区切りで分解
+        const cols = line.split(/[,\t]/).map(c => c.trim().replace(/^["']|["']$/g, ''));
+        
+        // ヘッダー行をスキップ
+        if (cols.some(c => c.includes('コード') || c.includes('銘柄名') || c.includes('銘柄'))) return;
+
+        // 証券コードを探す（4桁の数字）
+        let code = '';
+        let name = '';
+        let shares = 0;
+        let buyPrice = 0;
+        let currentPrice = 0;
+
+        // パターンA: 順番が決まっている標準形式 (コード, 銘柄名, 株数, 買値, 現在値)
+        if (cols.length >= 3) {
+          code = cols[0].match(/\d{4}/) ? cols[0].match(/\d{4}/)[0] : '';
+          name = cols[1] || code;
+          
+          // 数値列を抽出
+          const nums = cols.slice(2).map(c => parseFloat(c.replace(/,/g, ''))).filter(n => !isNaN(n));
+          if (nums.length >= 3) {
+            shares = nums[0];
+            buyPrice = nums[1];
+            currentPrice = nums[2];
+          } else if (nums.length === 2) {
+            shares = nums[0];
+            buyPrice = nums[1];
+            currentPrice = nums[1];
+          } else if (nums.length === 1) {
+            shares = nums[0];
+          }
+        }
+
+        if (name && shares > 0) {
+          stockList.push({
+            id: Date.now().toString() + Math.random().toString(36).substr(2, 4),
+            code,
+            name,
+            shares,
+            buyPrice: buyPrice || 0,
+            currentPrice: currentPrice || buyPrice || 0,
+            dps: 0,
+            yutaiVal: 0,
+            recordMonths: '',
+            yutaiDesc: ''
+          });
+          importedCount++;
+        }
+      });
+
+      if (importedCount > 0) {
+        saveToStorage();
+        closeImportModal();
+        alert(importedCount + ' 件の銘柄を取り込みました。\n配当額や優待額は各行の「編集」から追記できます。');
+      } else {
+        alert('データを正しく読み取れませんでした。フォーマットをご確認ください。');
+      }
+    }
+
+    function editStock(id) {
+      const s = stockList.find(item => item.id === id);
+      if (!s) return;
+      document.getElementById('editId').value = s.id;
+      document.getElementById('code').value = s.code || '';
+      document.getElementById('name').value = s.name;
+      document.getElementById('shares').value = s.shares;
+      document.getElementById('buyPrice').value = s.buyPrice;
+      document.getElementById('currentPrice').value = s.currentPrice;
+      document.getElementById('dps').value = s.dps || 0;
+      document.getElementById('yutaiVal').value = s.yutaiVal || 0;
+      document.getElementById('recordMonths').value = s.recordMonths || '';
+      document.getElementById('yutaiDesc').value = s.yutaiDesc || '';
+      document.getElementById('addModal').style.display = 'flex';
+    }
+
     function saveStock() {
+      const editId = document.getElementById('editId').value;
       const code = document.getElementById('code').value.trim();
       const name = document.getElementById('name').value.trim();
       const shares = parseInt(document.getElementById('shares').value, 10);
-      const buyPrice = parseFloat(document.getElementById('buyPrice').value);
-      const currentPrice = parseFloat(document.getElementById('currentPrice').value);
+      const buyPrice = parseFloat(document.getElementById('buyPrice').value) || 0;
+      const currentPrice = parseFloat(document.getElementById('currentPrice').value) || buyPrice;
       const dps = parseFloat(document.getElementById('dps').value) || 0;
       const yutaiVal = parseFloat(document.getElementById('yutaiVal').value) || 0;
       const recordMonths = document.getElementById('recordMonths').value.trim();
       const yutaiDesc = document.getElementById('yutaiDesc').value.trim();
 
-      if (!name || isNaN(shares) || isNaN(buyPrice) || isNaN(currentPrice)) {
-        alert('銘柄名、保有数、取得単価、現在株価を正しく入力してください。');
+      if (!name || isNaN(shares)) {
+        alert('銘柄名と保有株数は必須です。');
         return;
       }
 
-      stockList.push({
-        id: Date.now().toString(),
-        code,
-        name,
-        shares,
-        buyPrice,
-        currentPrice,
-        dps,
-        yutaiVal,
-        recordMonths,
-        yutaiDesc
-      });
+      if (editId) {
+        const idx = stockList.findIndex(item => item.id === editId);
+        if (idx !== -1) {
+          stockList[idx] = { ...stockList[idx], code, name, shares, buyPrice, currentPrice, dps, yutaiVal, recordMonths, yutaiDesc };
+        }
+      } else {
+        stockList.push({
+          id: Date.now().toString(),
+          code, name, shares, buyPrice, currentPrice, dps, yutaiVal, recordMonths, yutaiDesc
+        });
+      }
 
       saveToStorage();
       closeAddModal();
@@ -239,6 +380,13 @@
     function deleteStock(id) {
       stockList = stockList.filter(s => s.id !== id);
       saveToStorage();
+    }
+
+    function clearAllStocks() {
+      if (confirm('すべての登録データを削除して初期化しますか？')) {
+        stockList = [];
+        saveToStorage();
+      }
     }
 
     function render() {
@@ -260,7 +408,6 @@
         const annualYutai = item.yutaiVal;
         const annualTotalIncome = annualDiv + annualYutai;
 
-        // 利回り計算（時価ベース・簿価ベース）
         const marketYield = currentVal > 0 ? (annualTotalIncome / currentVal) * 100 : 0;
         const bookYield = cost > 0 ? (annualTotalIncome / cost) * 100 : 0;
 
@@ -307,7 +454,10 @@
             ${item.recordMonths ? `<span class="badge badge-month">${item.recordMonths}</span>` : '-'}
           </td>
           <td style="text-align: center;">
-            <button class="btn btn-sm btn-danger" onclick="deleteStock('${item.id}')">削除</button>
+            <div style="display: flex; gap: 4px; justify-content: center;">
+              <button class="btn btn-sm" style="background: #e2e8f0;" onclick="editStock('${item.id}')">編集</button>
+              <button class="btn btn-sm btn-danger" onclick="deleteStock('${item.id}')">削除</button>
+            </div>
           </td>
         `;
         tbody.appendChild(tr);
