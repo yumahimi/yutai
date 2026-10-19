@@ -4,12 +4,14 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>株主優待管理ウォレット</title>
+  <!-- QRコード解析用ライブラリ -->
+  <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
   <style>
     :root {
       --primary: #1e3a8a;
       --primary-light: #eff6ff;
+      --accent: #7c3aed;
       --danger: #dc2626;
-      --danger-light: #fef2f2;
       --gray-bg: #f8fafc;
       --card-bg: #ffffff;
       --border: #e2e8f0;
@@ -18,45 +20,54 @@
     }
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
     body { background-color: var(--gray-bg); color: var(--text); padding-bottom: 60px; }
-    header { background-color: var(--primary); color: white; padding: 16px 20px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-    header h1 { font-size: 1.2rem; font-weight: bold; }
-    .btn { cursor: pointer; padding: 8px 16px; border-radius: 6px; font-weight: 600; border: none; font-size: 0.9rem; transition: background 0.2s; }
+    header { background-color: var(--primary); color: white; padding: 14px 16px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+    header h1 { font-size: 1.1rem; font-weight: bold; }
+    .header-btns { display: flex; gap: 8px; }
+    .btn { cursor: pointer; padding: 8px 14px; border-radius: 6px; font-weight: 600; border: none; font-size: 0.85rem; transition: background 0.2s; }
     .btn-white { background: white; color: var(--primary); }
-    .btn-primary { background: var(--primary); color: white; }
-    .btn-danger { background: var(--danger); color: white; }
-    .btn-sm { padding: 4px 10px; font-size: 0.8rem; }
-    .container { max-width: 800px; margin: 20px auto; padding: 0 16px; }
-    .summary-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
-    .summary-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px; padding: 14px; }
-    .summary-card span { font-size: 0.8rem; color: var(--text-sub); display: block; margin-bottom: 4px; }
-    .summary-card strong { font-size: 1.3rem; color: var(--primary); }
+    .btn-qr { background: var(--accent); color: white; }
+    .btn-primary { background: var(--primary); color: white; width: 100%; padding: 10px; }
+    .btn-sm { padding: 4px 8px; font-size: 0.75rem; }
+    .container { max-width: 800px; margin: 16px auto; padding: 0 12px; }
+    .summary-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
+    .summary-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px; padding: 12px; }
+    .summary-card span { font-size: 0.75rem; color: var(--text-sub); display: block; margin-bottom: 2px; }
+    .summary-card strong { font-size: 1.2rem; color: var(--primary); }
     .summary-card.alert strong { color: var(--danger); }
-    .empty-state { background: var(--card-bg); border: 2px dashed var(--border); border-radius: 12px; padding: 40px 20px; text-align: center; margin-top: 20px; }
-    .empty-state p { color: var(--text-sub); margin-bottom: 16px; }
-    .group-block { margin-bottom: 24px; }
-    .group-header { display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; background: #e2e8f0; border-radius: 6px; font-weight: bold; font-size: 0.95rem; margin-bottom: 10px; }
+    .empty-state { background: var(--card-bg); border: 2px dashed var(--border); border-radius: 12px; padding: 36px 16px; text-align: center; margin-top: 16px; }
+    .empty-state p { color: var(--text-sub); font-size: 0.85rem; margin-bottom: 16px; }
+    .empty-actions { display: flex; flex-direction: column; gap: 10px; max-width: 280px; margin: 0 auto; }
+    .group-block { margin-bottom: 20px; }
+    .group-header { display: flex; justify-content: space-between; align-items: center; padding: 8px 10px; background: #e2e8f0; border-radius: 6px; font-weight: bold; font-size: 0.85rem; margin-bottom: 8px; }
     .group-header.alert { background: #fee2e2; color: #991b1b; }
-    .yutai-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px; padding: 14px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
-    .yutai-info h3 { font-size: 1rem; margin-bottom: 4px; display: flex; align-items: center; gap: 6px; }
-    .badge { font-size: 0.75rem; padding: 2px 6px; border-radius: 4px; background: #e0f2fe; color: #0369a1; }
-    .yutai-meta { font-size: 0.85rem; color: var(--text-sub); }
-    .yutai-actions { display: flex; align-items: center; gap: 10px; }
+    .yutai-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px; padding: 12px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
+    .yutai-info h3 { font-size: 0.95rem; margin-bottom: 3px; display: flex; align-items: center; gap: 6px; }
+    .badge { font-size: 0.7rem; padding: 1px 5px; border-radius: 4px; background: #e0f2fe; color: #0369a1; }
+    .yutai-meta { font-size: 0.8rem; color: var(--text-sub); }
+    .yutai-actions { display: flex; align-items: center; gap: 8px; }
     .yutai-balance { text-align: right; }
-    .yutai-balance strong { font-size: 1.2rem; color: var(--text); display: block; }
+    .yutai-balance strong { font-size: 1.1rem; color: var(--text); display: block; }
     .btn-delete { background: #fee2e2; color: var(--danger); border: 1px solid #fecaca; }
-    .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 200; justify-content: center; align-items: center; padding: 16px; }
-    .modal { background: white; border-radius: 10px; padding: 20px; width: 100%; max-width: 500px; max-height: 90vh; overflow-y: auto; }
-    .form-group { margin-bottom: 14px; }
-    .form-group label { display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 4px; color: var(--text); }
-    .form-group input, .form-group select { width: 100%; padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px; font-size: 0.95rem; }
-    .auto-filled-alert { background: #e0f2fe; color: #0369a1; font-size: 0.8rem; padding: 4px 8px; border-radius: 4px; margin-top: 4px; display: none; }
+    .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 200; justify-content: center; align-items: center; padding: 16px; }
+    .modal { background: white; border-radius: 10px; padding: 18px; width: 100%; max-width: 480px; max-height: 90vh; overflow-y: auto; }
+    .form-group { margin-bottom: 12px; }
+    .form-group label { display: block; font-size: 0.8rem; font-weight: 600; margin-bottom: 3px; }
+    .form-group input, .form-group select { width: 100%; padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 0.9rem; }
+    .auto-filled-alert { background: #e0f2fe; color: #0369a1; font-size: 0.75rem; padding: 4px 6px; border-radius: 4px; margin-top: 3px; display: none; }
+    #videoContainer { position: relative; width: 100%; height: 260px; background: #000; border-radius: 8px; overflow: hidden; margin-bottom: 12px; }
+    #cameraVideo { width: 100%; height: 100%; object-fit: cover; }
+    .scan-line { position: absolute; top: 15%; left: 10%; width: 80%; height: 2px; background: #22c55e; box-shadow: 0 0 8px #22c55e; animation: scan 2s linear infinite; }
+    @keyframes scan { 0% { top: 15%; } 50% { top: 85%; } 100% { top: 15%; } }
   </style>
 </head>
 <body>
 
   <header>
     <h1>株主優待ウォレット</h1>
-    <button class="btn btn-white" onclick="openAddModal()">＋ 優待を追加</button>
+    <div class="header-btns">
+      <button class="btn btn-qr" onclick="openCameraModal()">📷 QR読取</button>
+      <button class="btn btn-white" onclick="openAddModal()">＋ 追加</button>
+    </div>
   </header>
 
   <div class="container">
@@ -74,9 +85,29 @@
     <div id="contentArea"></div>
   </div>
 
+  <!-- QRカメラモーダル -->
+  <div class="modal-overlay" id="cameraModal">
+    <div class="modal" style="text-align: center;">
+      <h2 style="font-size: 1.05rem; margin-bottom: 10px;">優待通知のQRコード読取</h2>
+      <div id="videoContainer">
+        <video id="cameraVideo" playsinline></video>
+        <div class="scan-line"></div>
+      </div>
+      <p style="font-size: 0.8rem; color: var(--text-sub); margin-bottom: 12px;">ハガキや書類のQRコードを枠内に合わせてください</p>
+      
+      <div style="border-top: 1px solid var(--border); padding-top: 10px; margin-bottom: 14px;">
+        <label style="font-size: 0.8rem; font-weight: 600; display: block; margin-bottom: 6px;">写真から読み取る場合</label>
+        <input type="file" accept="image/*" onchange="handleImageQr(this)" style="font-size: 0.8rem;">
+      </div>
+
+      <button class="btn" style="background: #e2e8f0; width: 100%;" onclick="closeCameraModal()">閉じる</button>
+    </div>
+  </div>
+
+  <!-- 優待追加モーダル -->
   <div class="modal-overlay" id="addModal">
     <div class="modal">
-      <h2 style="font-size: 1.1rem; margin-bottom: 16px;">株主優待の追加</h2>
+      <h2 style="font-size: 1.05rem; margin-bottom: 14px;">株主優待の追加</h2>
       <div class="form-group">
         <label>証券コード（4桁）</label>
         <input type="text" id="secCode" placeholder="例: 3197, 9861, 2702" oninput="handleCodeInput(this.value)">
@@ -104,15 +135,17 @@
         <input type="date" id="expiry">
       </div>
       <div class="form-group">
-        <label>デジタルギフトURL（任意）</label>
+        <label>ギフトURL（QRから自動読取可能）</label>
         <input type="url" id="giftUrl" placeholder="https://...">
       </div>
-      <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px;">
-        <button class="btn" style="background: #e2e8f0;" onclick="closeAddModal()">キャンセル</button>
-        <button class="btn btn-primary" onclick="saveYutai()">保存する</button>
+      <div style="display: flex; gap: 8px; margin-top: 16px;">
+        <button class="btn" style="background: #e2e8f0; flex: 1;" onclick="closeAddModal()">キャンセル</button>
+        <button class="btn btn-primary" style="flex: 1;" onclick="saveYutai()">保存する</button>
       </div>
     </div>
   </div>
+
+  <canvas id="qrCanvas" style="display: none;"></canvas>
 
   <script>
     const YUTAI_DB = {
@@ -130,6 +163,8 @@
     };
 
     let yutaiList = JSON.parse(localStorage.getItem('my_yutai_list_v1') || '[]');
+    let cameraStream = null;
+    let scanAnimId = null;
 
     function saveToStorage() {
       localStorage.setItem('my_yutai_list_v1', JSON.stringify(yutaiList));
@@ -165,6 +200,87 @@
 
     function closeAddModal() {
       document.getElementById('addModal').style.display = 'none';
+    }
+
+    /* カメラ起動処理 */
+    async function openCameraModal() {
+      document.getElementById('cameraModal').style.display = 'flex';
+      const video = document.getElementById('cameraVideo');
+      try {
+        cameraStream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: 'environment' }
+        });
+        video.srcObject = cameraStream;
+        video.setAttribute('playsinline', true);
+        video.play();
+        requestAnimationFrame(tickScan);
+      } catch (err) {
+        alert('カメラの起動に失敗しました。カメラ権限を許可するか、下の「写真から読み取る」をご利用ください。');
+      }
+    }
+
+    function closeCameraModal() {
+      if (cameraStream) {
+        cameraStream.getTracks().forEach(track => track.stop());
+        cameraStream = null;
+      }
+      if (scanAnimId) cancelAnimationFrame(scanAnimId);
+      document.getElementById('cameraModal').style.display = 'none';
+    }
+
+    function tickScan() {
+      const video = document.getElementById('cameraVideo');
+      if (video.readyState === video.HAVE_ENOUGH_DATA) {
+        const canvas = document.getElementById('qrCanvas');
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const code = jsQR(imgData.data, imgData.width, imgData.height, {
+          inversionAttempts: "dontInvert"
+        });
+        if (code) {
+          closeCameraModal();
+          handleQrResult(code.data);
+          return;
+        }
+      }
+      scanAnimId = requestAnimationFrame(tickScan);
+    }
+
+    function handleImageQr(input) {
+      if (!input.files || !input.files[0]) return;
+      const file = input.files[0];
+      const img = new Image();
+      img.onload = function() {
+        const canvas = document.getElementById('qrCanvas');
+        canvas.width = img.width;
+        canvas.height = img.height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0);
+        const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const code = jsQR(imgData.data, imgData.width, imgData.height);
+        if (code) {
+          closeCameraModal();
+          handleQrResult(code.data);
+        } else {
+          alert('画像からQRコードを検出できませんでした。');
+        }
+      };
+      img.src = URL.createObjectURL(file);
+    }
+
+    function handleQrResult(urlText) {
+      openAddModal();
+      document.getElementById('giftUrl').value = urlText;
+      for (const [code, info] of Object.entries(YUTAI_DB)) {
+        if (urlText.toLowerCase().includes(info.name.toLowerCase()) || urlText.includes(code)) {
+          document.getElementById('secCode').value = code;
+          handleCodeInput(code);
+          return;
+        }
+      }
     }
 
     function saveYutai() {
@@ -219,9 +335,12 @@
       if (yutaiList.length === 0) {
         content.innerHTML = `
           <div class="empty-state">
-            <h3 style="font-size: 1.1rem; margin-bottom: 8px;">保有している優待がありません</h3>
-            <p>お手持ちの食事券・ギフト券を登録して管理を始めましょう</p>
-            <button class="btn btn-primary" onclick="openAddModal()">＋ 優待を手動で追加</button>
+            <h3 style="font-size: 1rem; margin-bottom: 6px;">保有している優待がありません</h3>
+            <p>お手持ちの食事券やQR通知を登録して始めましょう</p>
+            <div class="empty-actions">
+              <button class="btn btn-qr" style="padding: 10px;" onclick="openCameraModal()">📷 QRカメラで読み取る</button>
+              <button class="btn btn-primary" onclick="openAddModal()">＋ 手動で追加する</button>
+            </div>
           </div>
         `;
         return;
@@ -252,8 +371,7 @@
               <div class="yutai-card">
                 <div class="yutai-info">
                   <h3>${item.name} <span class="badge">${item.category}</span></h3>
-                  <div class="yutai-meta">期限: ${item.expiry}</div>
-                  ${item.giftUrl ? `<a href="${item.giftUrl}" target="_blank" style="font-size: 0.8rem; color: #2563eb; text-decoration: none; display: inline-block; margin-top: 4px;">🔗 ギフト画面を開く</a>` : ''}
+                  <div class="yutai-meta">期限: ${item.expiry}</div>${item.giftUrl ? `<a href="${item.giftUrl}" target="_blank" style="font-size: 0.8rem; color: #2563eb; text-decoration: none; display: inline-block; margin-top: 3px;">🔗 ギフト画面を開く</a>` : ''}
                 </div>
                 <div class="yutai-actions">
                   <div class="yutai-balance">
