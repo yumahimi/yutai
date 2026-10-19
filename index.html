@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>株主優待管理ウォレット</title>
+  <style>
+    :root {
+      --primary: #1e3a8a;
+      --primary-light: #eff6ff;
+      --danger: #dc2626;
+      --danger-light: #fef2f2;
+      --gray-bg: #f8fafc;
+      --card-bg: #ffffff;
+      --border: #e2e8f0;
+      --text: #0f172a;
+      --text-sub: #64748b;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
+    body { background-color: var(--gray-bg); color: var(--text); padding-bottom: 60px; }
+    header { background-color: var(--primary); color: white; padding: 16px 20px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+    header h1 { font-size: 1.2rem; font-weight: bold; }
+    .btn { cursor: pointer; padding: 8px 16px; border-radius: 6px; font-weight: 600; border: none; font-size: 0.9rem; transition: background 0.2s; }
+    .btn-white { background: white; color: var(--primary); }
+    .btn-primary { background: var(--primary); color: white; }
+    .btn-danger { background: var(--danger); color: white; }
+    .btn-sm { padding: 4px 10px; font-size: 0.8rem; }
+    .container { max-width: 800px; margin: 20px auto; padding: 0 16px; }
+    .summary-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
+    .summary-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px; padding: 14px; }
+    .summary-card span { font-size: 0.8rem; color: var(--text-sub); display: block; margin-bottom: 4px; }
+    .summary-card strong { font-size: 1.3rem; color: var(--primary); }
+    .summary-card.alert strong { color: var(--danger); }
+    .empty-state { background: var(--card-bg); border: 2px dashed var(--border); border-radius: 12px; padding: 40px 20px; text-align: center; margin-top: 20px; }
+    .empty-state p { color: var(--text-sub); margin-bottom: 16px; }
+    .group-block { margin-bottom: 24px; }
+    .group-header { display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; background: #e2e8f0; border-radius: 6px; font-weight: bold; font-size: 0.95rem; margin-bottom: 10px; }
+    .group-header.alert { background: #fee2e2; color: #991b1b; }
+    .yutai-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px; padding: 14px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+    .yutai-info h3 { font-size: 1rem; margin-bottom: 4px; display: flex; align-items: center; gap: 6px; }
+    .badge { font-size: 0.75rem; padding: 2px 6px; border-radius: 4px; background: #e0f2fe; color: #0369a1; }
+    .yutai-meta { font-size: 0.85rem; color: var(--text-sub); }
+    .yutai-actions { display: flex; align-items: center; gap: 10px; }
+    .yutai-balance { text-align: right; }
+    .yutai-balance strong { font-size: 1.2rem; color: var(--text); display: block; }
+    .btn-delete { background: #fee2e2; color: var(--danger); border: 1px solid #fecaca; }
+    .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 200; justify-content: center; align-items: center; padding: 16px; }
+    .modal { background: white; border-radius: 10px; padding: 20px; width: 100%; max-width: 500px; max-height: 90vh; overflow-y: auto; }
+    .form-group { margin-bottom: 14px; }
+    .form-group label { display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 4px; color: var(--text); }
+    .form-group input, .form-group select { width: 100%; padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px; font-size: 0.95rem; }
+    .auto-filled-alert { background: #e0f2fe; color: #0369a1; font-size: 0.8rem; padding: 4px 8px; border-radius: 4px; margin-top: 4px; display: none; }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>株主優待ウォレット</h1>
+    <button class="btn btn-white" onclick="openAddModal()">＋ 優待を追加</button>
+  </header>
+
+  <div class="container">
+    <div class="summary-grid">
+      <div class="summary-card">
+        <span>総保有残高</span>
+        <strong id="totalBalance">0 円</strong>
+      </div>
+      <div class="summary-card alert">
+        <span>30日以内失効リスク</span>
+        <strong id="expiringBalance">0 円</strong>
+      </div>
+    </div>
+
+    <div id="contentArea"></div>
+  </div>
+
+  <div class="modal-overlay" id="addModal">
+    <div class="modal">
+      <h2 style="font-size: 1.1rem; margin-bottom: 16px;">株主優待の追加</h2>
+      <div class="form-group">
+        <label>証券コード（4桁）</label>
+        <input type="text" id="secCode" placeholder="例: 3197, 9861, 2702" oninput="handleCodeInput(this.value)">
+        <div id="codeDetectMsg" class="auto-filled-alert"></div>
+      </div>
+      <div class="form-group">
+        <label>銘柄・企業名</label>
+        <input type="text" id="companyName" placeholder="例: すかいらーくホールディングス">
+      </div>
+      <div class="form-group">
+        <label>カテゴリ</label>
+        <select id="category">
+          <option value="外食">外食</option>
+          <option value="買い物">買物・日用品</option>
+          <option value="旅行">旅行・交通</option>
+          <option value="その他">その他</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>残高・保有額（円）</label>
+        <input type="number" id="balance" placeholder="例: 5000">
+      </div>
+      <div class="form-group">
+        <label>有効期限</label>
+        <input type="date" id="expiry">
+      </div>
+      <div class="form-group">
+        <label>デジタルギフトURL（任意）</label>
+        <input type="url" id="giftUrl" placeholder="https://...">
+      </div>
+      <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px;">
+        <button class="btn" style="background: #e2e8f0;" onclick="closeAddModal()">キャンセル</button>
+        <button class="btn btn-primary" onclick="saveYutai()">保存する</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const YUTAI_DB = {
+      '3197': { name: 'すかいらーくホールディングス', cat: '外食' },
+      '9861': { name: '吉野家ホールディングス', cat: '外食' },
+      '2702': { name: '日本マクドナルドHD', cat: '外食' },
+      '3048': { name: 'ビックカメラ', cat: '買い物' },
+      '8267': { name: 'イオン', cat: '買い物' },
+      '3387': { name: 'クリエイト・レストランツHD', cat: '外食' },
+      '3543': { name: 'コメダホールディングス', cat: '外食' },
+      '7616': { name: 'コロワイド', cat: '外食' },
+      '7550': { name: 'ゼンショーホールディングス', cat: '外食' },
+      '9202': { name: 'ANAホールディングス', cat: '旅行' },
+      '9201': { name: '日本航空（JAL）', cat: '旅行' }
+    };
+
+    let yutaiList = JSON.parse(localStorage.getItem('my_yutai_list_v1') || '[]');
+
+    function saveToStorage() {
+      localStorage.setItem('my_yutai_list_v1', JSON.stringify(yutaiList));
+      render();
+    }
+
+    function handleCodeInput(val) {
+      const code = val.trim();
+      const msg = document.getElementById('codeDetectMsg');
+      if (YUTAI_DB[code]) {
+        document.getElementById('companyName').value = YUTAI_DB[code].name;
+        document.getElementById('category').value = YUTAI_DB[code].cat;
+        msg.style.display = 'block';
+        msg.textContent = '✓ ' + YUTAI_DB[code].name + ' を自動検出しました';
+        
+        const now = new Date();
+        const nextYear = new Date(now.getFullYear() + 1, now.getMonth() + 1, 0);
+        document.getElementById('expiry').value = nextYear.toISOString().split('T')[0];
+      } else {
+        msg.style.display = 'none';
+      }
+    }
+
+    function openAddModal() {
+      document.getElementById('secCode').value = '';
+      document.getElementById('companyName').value = '';
+      document.getElementById('balance').value = '';
+      document.getElementById('expiry').value = '';
+      document.getElementById('giftUrl').value = '';
+      document.getElementById('codeDetectMsg').style.display = 'none';
+      document.getElementById('addModal').style.display = 'flex';
+    }
+
+    function closeAddModal() {
+      document.getElementById('addModal').style.display = 'none';
+    }
+
+    function saveYutai() {
+      const name = document.getElementById('companyName').value.trim();
+      const balance = parseInt(document.getElementById('balance').value, 10);
+      const expiry = document.getElementById('expiry').value;
+      const category = document.getElementById('category').value;
+      const giftUrl = document.getElementById('giftUrl').value.trim();
+
+      if (!name || isNaN(balance) || !expiry) {
+        alert('企業名、金額、有効期限を正しく入力してください。');
+        return;
+      }
+
+      yutaiList.push({
+        id: Date.now().toString(),
+        name,
+        balance,
+        expiry,
+        category,
+        giftUrl
+      });
+
+      saveToStorage();
+      closeAddModal();
+    }
+
+    function deleteYutai(id) {
+      yutaiList = yutaiList.filter(item => item.id !== id);
+      saveToStorage();
+    }
+
+    function render() {
+      const content = document.getElementById('contentArea');
+      let total = 0;
+      let expiring = 0;
+      const today = new Date();
+      today.setHours(0,0,0,0);
+      const in30Days = new Date(today.getTime() + 30 * 24 * 60 * 60 * 1000);
+
+      yutaiList.forEach(item => {
+        total += item.balance;
+        const expDate = new Date(item.expiry);
+        if (expDate >= today && expDate <= in30Days) {
+          expiring += item.balance;
+        }
+      });
+
+      document.getElementById('totalBalance').textContent = total.toLocaleString() + ' 円';
+      document.getElementById('expiringBalance').textContent = expiring.toLocaleString() + ' 円';
+
+      if (yutaiList.length === 0) {
+        content.innerHTML = `
+          <div class="empty-state">
+            <h3 style="font-size: 1.1rem; margin-bottom: 8px;">保有している優待がありません</h3>
+            <p>お手持ちの食事券・ギフト券を登録して管理を始めましょう</p>
+            <button class="btn btn-primary" onclick="openAddModal()">＋ 優待を手動で追加</button>
+          </div>
+        `;
+        return;
+      }
+
+      const sorted = [...yutaiList].sort((a, b) => new Date(a.expiry) - new Date(b.expiry));
+      const groups = {};
+
+      sorted.forEach(item => {
+        const d = new Date(item.expiry);
+        const key = d.getFullYear() + '年' + (d.getMonth() + 1) + '月末 期限';
+        if (!groups[key]) groups[key] = [];
+        groups[key].push(item);
+      });
+
+      let html = '';
+      for (const [key, items] of Object.entries(groups)) {
+        const groupTotal = items.reduce((sum, i) => sum + i.balance, 0);
+        const isAlert = items.some(i => new Date(i.expiry) <= in30Days);
+
+        html += `
+          <div class="group-block">
+            <div class="group-header ${isAlert ? 'alert' : ''}">
+              <span>📅 ${key} (${items.length}件)</span>
+              <span>合計: ${groupTotal.toLocaleString()} 円</span>
+            </div>
+            ${items.map(item => `
+              <div class="yutai-card">
+                <div class="yutai-info">
+                  <h3>${item.name} <span class="badge">${item.category}</span></h3>
+                  <div class="yutai-meta">期限: ${item.expiry}</div>
+                  ${item.giftUrl ? `<a href="${item.giftUrl}" target="_blank" style="font-size: 0.8rem; color: #2563eb; text-decoration: none; display: inline-block; margin-top: 4px;">🔗 ギフト画面を開く</a>` : ''}
+                </div>
+                <div class="yutai-actions">
+                  <div class="yutai-balance">
+                    <strong>${item.balance.toLocaleString()} 円</strong>
+                  </div>
+                  <button class="btn btn-sm btn-delete" onclick="deleteYutai('${item.id}')">× 削除</button>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        `;
+      }
+
+      content.innerHTML = html;
+    }
+
+    render();
+  </script>
+</body>
+</html>
