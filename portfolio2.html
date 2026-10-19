@@ -222,4 +222,327 @@
 
       // 小売・流通・買物
       '3048': { name: 'ビックカメラ', dps: 24, yutai: 3000, months: '2月, 8月', desc: '買物優待券3,000円分(長期優遇有)' },
-      '8267': { name: 'イオン', dps: 40, yutai: 6000, months:
+      '8267': { name: 'イオン', dps: 40, yutai: 6000, months: '2月, 8月', desc: 'オーナーズカード3%返金キャッシュバック' },
+      '7512': { name: 'イオン北海道', dps: 14, yutai: 2500, months: '2月', desc: '優待買物割引券2,500円分' },
+      '2685': { name: 'アダストリア', dps: 90, yutai: 3000, months: '2月', desc: '商品引換券3,000円分' },
+      '2792': { name: 'ハニーズHD', dps: 55, yutai: 3000, months: '5月', desc: '優待商品券3,000円分' },
+      '3099': { name: '三越伊勢丹HD', dps: 46, yutai: 10000, months: '3月, 9月', desc: 'お買物10%割引カード' },
+      '8252': { name: '丸井グループ', dps: 105, yutai: 2000, months: '3月, 9月', desc: 'エポスポイント2,000P' },
+
+      // 金融・リース・総合商社
+      '8591': { name: 'オリックス', dps: 120, yutai: 0, months: '3月, 9月', desc: '高配当(優待は終了)' },
+      '8411': { name: 'みずほFG', dps: 130, yutai: 0, months: '3月, 9月', desc: '高配当金融' },
+      '8306': { name: '三菱UFJ FG', dps: 50, yutai: 0, months: '3月, 9月', desc: '高配当メガバンク' },
+      '8316': { name: '三井住友FG', dps: 110, yutai: 0, months: '3月, 9月', desc: '高配当メガバンク' },
+      '8473': { name: 'SBIホールディングス', dps: 160, yutai: 2000, months: '3月', desc: '暗号資産XRPまたは健康補助食品' },
+      '8058': { name: '三菱商事', dps: 100, yutai: 0, months: '3月, 9月', desc: '累進配当・高利回り' },
+      '8001': { name: '伊藤忠商事', dps: 200, yutai: 0, months: '3月, 9月', desc: '累進配当' },
+      '8031': { name: '三井物産', dps: 100, yutai: 0, months: '3月, 9月', desc: '高配当商社' },
+
+      // 通信・交通・その他
+      '9432': { name: 'NTT', dps: 5.2, yutai: 1500, months: '3月, 9月', desc: 'dポイント付与(長期保有時)' },
+      '9433': { name: 'KDDI', dps: 145, yutai: 2000, months: '3月', desc: 'カタログギフト/Pontaポイント' },
+      '9434': { name: 'ソフトバンク', dps: 8.6, yutai: 1000, months: '3月, 9月', desc: 'PayPayポイント1,000P(1年保有)' },
+      '9202': { name: 'ANAホールディングス', dps: 50, yutai: 5000, months: '3月, 9月', desc: '国内線50%割引優待番号券' },
+      '9201': { name: '日本航空（JAL）', dps: 75, yutai: 4000, months: '3月, 9月', desc: '国内線50%割引株主割引券' },
+      '9020': { name: 'JR東日本', dps: 55, yutai: 4000, months: '3月', desc: '株主優待割引券40%割引' },
+      '9022': { name: 'JR東海', dps: 22, yutai: 2000, months: '3月', desc: '運賃10%割引券' },
+      '4912': { name: 'ライオン', dps: 27, yutai: 2500, months: '12月', desc: '自社新製品詰め合わせセット' },
+      '2802': { name: '味の素', dps: 74, yutai: 1500, months: '3月', desc: '自社製品詰め合わせ(半年保有)' }
+    };
+
+    let stockList = JSON.parse(localStorage.getItem('my_stock_portfolio_v1') || '[]');
+
+    function saveToStorage() {
+      localStorage.setItem('my_stock_portfolio_v1', JSON.stringify(stockList));
+      render();
+    }
+
+    function lookupCode(val) {
+      const code = val.trim();
+      if (STOCK_MASTER[code]) {
+        const m = STOCK_MASTER[code];
+        document.getElementById('name').value = m.name;
+        document.getElementById('dps').value = m.dps;
+        document.getElementById('yutaiVal').value = m.yutai;
+        document.getElementById('recordMonths').value = m.months;
+        document.getElementById('yutaiDesc').value = m.desc;
+      }
+    }
+
+    function openAddModal() {
+      document.getElementById('editId').value = '';
+      document.getElementById('code').value = '';
+      document.getElementById('name').value = '';
+      document.getElementById('shares').value = '';
+      document.getElementById('buyPrice').value = '';
+      document.getElementById('currentPrice').value = '';
+      document.getElementById('dps').value = '0';
+      document.getElementById('yutaiVal').value = '0';
+      document.getElementById('recordMonths').value = '';
+      document.getElementById('yutaiDesc').value = '';
+      document.getElementById('addModal').style.display = 'flex';
+    }
+
+    function closeAddModal() {
+      document.getElementById('addModal').style.display = 'none';
+    }
+
+    function openImportModal() {
+      document.getElementById('csvFileInput').value = '';
+      document.getElementById('importRawText').value = '';
+      document.getElementById('importModal').style.display = 'flex';
+    }
+
+    function closeImportModal() {
+      document.getElementById('importModal').style.display = 'none';
+    }
+
+    function handleFileSelect(input) {
+      const file = input.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        document.getElementById('importRawText').value = e.target.result;
+      };
+      reader.readAsText(file, 'Shift_JIS');
+    }
+
+    /* 自動照合付きインポート */
+    function processImport() {
+      const raw = document.getElementById('importRawText').value.trim();
+      if (!raw) {
+        alert('データが入力されていません。');
+        return;
+      }
+
+      const lines = raw.split(/\r?\n/);
+      let importedCount = 0;
+
+      lines.forEach(line => {
+        if (!line.trim()) return;
+        const cols = line.split(/[,\t]/).map(c => c.trim().replace(/^["']|["']$/g, ''));
+        if (cols.some(c => c.includes('コード') || c.includes('銘柄名') || c.includes('銘柄'))) return;
+
+        let code = '';
+        let name = '';
+        let shares = 0;
+        let buyPrice = 0;
+        let currentPrice = 0;
+
+        if (cols.length >= 2) {
+          const mCode = cols[0].match(/\d{4}/);
+          code = mCode ? mCode[0] : '';
+          name = cols[1] || code;
+
+          const nums = cols.slice(2).map(c => parseFloat(c.replace(/,/g, ''))).filter(n => !isNaN(n));
+          if (nums.length >= 3) {
+            shares = nums[0];
+            buyPrice = nums[1];
+            currentPrice = nums[2];
+          } else if (nums.length === 2) {
+            shares = nums[0];
+            buyPrice = nums[1];
+            currentPrice = nums[1];
+          } else if (nums.length === 1) {
+            shares = nums[0];
+          }
+        }
+
+        if (code || name) {
+          // マスターデータから自動照合
+          let autoMaster = STOCK_MASTER[code] || null;
+          if (!autoMaster) {
+            for (const [k, v] of Object.entries(STOCK_MASTER)) {
+              if (name && (name.includes(v.name) || v.name.includes(name))) {
+                autoMaster = v;
+                if (!code) code = k;
+                break;
+              }
+            }
+          }
+
+          stockList.push({
+            id: Date.now().toString() + Math.random().toString(36).substr(2, 4),
+            code: code,
+            name: name || (autoMaster ? autoMaster.name : '不明'),
+            shares: shares || 100,
+            buyPrice: buyPrice || 0,
+            currentPrice: currentPrice || buyPrice || 0,
+            dps: autoMaster ? autoMaster.dps : 0,
+            yutaiVal: autoMaster ? autoMaster.yutai : 0,
+            recordMonths: autoMaster ? autoMaster.months : '',
+            yutaiDesc: autoMaster ? autoMaster.desc : ''
+          });
+          importedCount++;
+        }
+      });
+
+      if (importedCount > 0) {
+        saveToStorage();
+        closeImportModal();
+        alert(importedCount + ' 件の銘柄を取り込みました！\n該当する銘柄の配当金・優待・利回りが自動反映されました。');
+      } else {
+        alert('データを読み取れませんでした。形式をご確認ください。');
+      }
+    }
+
+    function editStock(id) {
+      const s = stockList.find(item => item.id === id);
+      if (!s) return;
+      document.getElementById('editId').value = s.id;
+      document.getElementById('code').value = s.code || '';
+      document.getElementById('name').value = s.name;
+      document.getElementById('shares').value = s.shares;
+      document.getElementById('buyPrice').value = s.buyPrice;
+      document.getElementById('currentPrice').value = s.currentPrice;
+      document.getElementById('dps').value = s.dps || 0;
+      document.getElementById('yutaiVal').value = s.yutaiVal || 0;
+      document.getElementById('recordMonths').value = s.recordMonths || '';
+      document.getElementById('yutaiDesc').value = s.yutaiDesc || '';
+      document.getElementById('addModal').style.display = 'flex';
+    }
+
+    function saveStock() {
+      const editId = document.getElementById('editId').value;
+      const code = document.getElementById('code').value.trim();
+      const name = document.getElementById('name').value.trim();
+      const shares = parseInt(document.getElementById('shares').value, 10);
+      const buyPrice = parseFloat(document.getElementById('buyPrice').value) || 0;
+      const currentPrice = parseFloat(document.getElementById('currentPrice').value) || buyPrice;
+      const dps = parseFloat(document.getElementById('dps').value) || 0;
+      const yutaiVal = parseFloat(document.getElementById('yutaiVal').value) || 0;
+      const recordMonths = document.getElementById('recordMonths').value.trim();
+      const yutaiDesc = document.getElementById('yutaiDesc').value.trim();
+
+      if (!name || isNaN(shares)) {
+        alert('銘柄名と株数は必須です。');
+        return;
+      }
+
+      if (editId) {
+        const idx = stockList.findIndex(item => item.id === editId);
+        if (idx !== -1) {
+          stockList[idx] = { ...stockList[idx], code, name, shares, buyPrice, currentPrice, dps, yutaiVal, recordMonths, yutaiDesc };
+        }
+      } else {
+        stockList.push({
+          id: Date.now().toString(),
+          code, name, shares, buyPrice, currentPrice, dps, yutaiVal, recordMonths, yutaiDesc
+        });
+      }
+
+      saveToStorage();
+      closeAddModal();
+    }
+
+    function deleteStock(id) {
+      stockList = stockList.filter(s => s.id !== id);
+      saveToStorage();
+    }
+
+    function clearAllStocks() {
+      if (confirm('すべての登録データを初期化しますか？')) {
+        stockList = [];
+        saveToStorage();
+      }
+    }
+
+    function render() {
+      const tbody = document.getElementById('stockTableBody');
+      tbody.innerHTML = '';
+
+      let totalCost = 0;
+      let totalCurrentVal = 0;
+      let totalAnnualDiv = 0;
+      let totalAnnualYutai = 0;
+
+      stockList.forEach(item => {
+        const cost = item.shares * item.buyPrice;
+        const currentVal = item.shares * item.currentPrice;
+        const profit = currentVal - cost;
+        const profitRate = cost > 0 ? (profit / cost) * 100 : 0;
+
+        const annualDiv = item.shares * (item.dps || 0);
+        const annualYutai = item.yutaiVal || 0;
+        const annualTotalIncome = annualDiv + annualYutai;
+
+        const marketYield = currentVal > 0 ? (annualTotalIncome / currentVal) * 100 : 0;
+        const bookYield = cost > 0 ? (annualTotalIncome / cost) * 100 : 0;
+
+        const divYield = currentVal > 0 ? (annualDiv / currentVal) * 100 : 0;
+        const yutaiYield = currentVal > 0 ? (annualYutai / currentVal) * 100 : 0;
+
+        totalCost += cost;
+        totalCurrentVal += currentVal;
+        totalAnnualDiv += annualDiv;
+        totalAnnualYutai += annualYutai;
+
+        const profitClass = profit >= 0 ? 'color: var(--success);' : 'color: var(--danger);';
+        const sign = profit >= 0 ? '+' : '';
+
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>
+            <strong>${item.name}</strong> 
+            <span style="font-size: 0.75rem; color: var(--text-sub);">${item.code || '-'}</span>
+            ${item.yutaiDesc ? `<div style="font-size: 0.75rem; color: var(--text-sub); margin-top: 2px;">🎁 ${item.yutaiDesc}</div>` : ''}
+          </td>
+          <td>
+            ${item.shares.toLocaleString()} 株<br>
+            <span style="font-size: 0.75rem; color: var(--text-sub);">取得: @${item.buyPrice.toLocaleString()} 円</span>
+          </td>
+          <td>
+            ${item.currentPrice.toLocaleString()} 円<br>
+            <span style="font-size: 0.75rem; ${profitClass}">
+              損益: ${sign}${profit.toLocaleString()} 円 (${sign}${profitRate.toFixed(2)}%)
+            </span>
+          </td>
+          <td>
+            配当: <strong>${divYield.toFixed(2)}%</strong> (年${annualDiv.toLocaleString()}円)<br>
+            優待: <strong>${yutaiYield.toFixed(2)}%</strong> (年${annualYutai.toLocaleString()}円)
+          </td>
+          <td>
+            <span class="badge badge-yield" style="font-size: 0.85rem;">
+              時価: ${marketYield.toFixed(2)}%
+            </span>
+            <div style="font-size: 0.75rem; color: var(--text-sub); margin-top: 2px;">
+              簿価: ${bookYield.toFixed(2)}%
+            </div>
+          </td>
+          <td>
+            ${item.recordMonths ? `<span class="badge badge-month">${item.recordMonths}</span>` : '-'}
+          </td>
+          <td style="text-align: center;">
+            <div style="display: flex; gap: 4px; justify-content: center;">
+              <button class="btn btn-sm" style="background: #e2e8f0;" onclick="editStock('${item.id}')">編集</button>
+              <button class="btn btn-sm btn-danger" onclick="deleteStock('${item.id}')">削除</button>
+            </div>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      document.getElementById('stockCount').textContent = stockList.length + ' 銘柄';
+
+      const totalProfit = totalCurrentVal - totalCost;
+      const profitRate = totalCost > 0 ? (totalProfit / totalCost) * 100 : 0;
+      const totalIncome = totalAnnualDiv + totalAnnualYutai;
+      const totalMarketYield = totalCurrentVal > 0 ? (totalIncome / totalCurrentVal) * 100 : 0;
+      const totalBookYield = totalCost > 0 ? (totalIncome / totalCost) * 100 : 0;
+
+      document.getElementById('totalVal').textContent = totalCurrentVal.toLocaleString() + ' 円';
+      
+      const profitEl = document.getElementById('totalProfit');
+      profitEl.textContent = (totalProfit >= 0 ? '+' : '') + totalProfit.toLocaleString() + ' 円 (' + (totalProfit >= 0 ? '+' : '') + profitRate.toFixed(2) + '%)';
+      profitEl.style.color = totalProfit >= 0 ? 'var(--success)' : 'var(--danger)';
+
+      document.getElementById('totalDiv').textContent = totalAnnualDiv.toLocaleString() + ' 円';
+      document.getElementById('totalYutai').textContent = totalAnnualYutai.toLocaleString() + ' 円';
+      document.getElementById('totalYield').textContent = totalMarketYield.toFixed(2) + '% / ' + totalBookYield.toFixed(2) + '%';
+    }
+
+    render();
+  </script>
+</body>
+</html>
