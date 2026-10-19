@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>個別株 利回り・優待アナライザー</title>
+  <title>個別株 利回り・優待アナライザー (Web自動収集版)</title>
   <style>
     :root {
       --primary: #0f172a;
@@ -19,15 +19,16 @@
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
     body { background-color: var(--bg); color: var(--text); padding-bottom: 60px; }
     header { background-color: var(--primary); color: white; padding: 14px 20px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-    header h1 { font-size: 1.1rem; font-weight: bold; }
-    .header-btns { display: flex; gap: 8px; }
-    .btn { cursor: pointer; padding: 7px 14px; border-radius: 6px; font-weight: 600; border: none; font-size: 0.85rem; transition: background 0.2s; }
+    header h1 { font-size: 1.05rem; font-weight: bold; }
+    .header-btns { display: flex; gap: 8px; flex-wrap: wrap; }
+    .btn { cursor: pointer; padding: 7px 12px; border-radius: 6px; font-weight: 600; border: none; font-size: 0.82rem; transition: background 0.2s; }
     .btn-white { background: white; color: var(--primary); }
     .btn-import { background: #3b82f6; color: white; }
+    .btn-sync { background: #059669; color: white; }
     .btn-primary { background: var(--accent); color: white; }
     .btn-danger { background: #fee2e2; color: var(--danger); border: 1px solid #fecaca; }
     .btn-sm { padding: 4px 8px; font-size: 0.75rem; }
-    .container { max-width: 1050px; margin: 16px auto; padding: 0 12px; }
+    .container { max-width: 1080px; margin: 16px auto; padding: 0 12px; }
 
     .dashboard-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; margin-bottom: 20px; }
     .stat-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; }
@@ -35,6 +36,10 @@
     .stat-card strong { font-size: 1.25rem; color: var(--text); display: block; }
     .stat-card.highlight strong { color: var(--accent); }
     .stat-card.success strong { color: var(--success); }
+
+    .progress-bar-container { display: none; background: #e2e8f0; border-radius: 999px; height: 10px; width: 100%; margin-bottom: 16px; overflow: hidden; }
+    .progress-bar { background: var(--accent); height: 100%; width: 0%; transition: width 0.3s; }
+    #syncStatusText { font-size: 0.8rem; color: var(--text-sub); margin-bottom: 12px; display: none; text-align: right; }
 
     .section-title { font-size: 1rem; font-weight: bold; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
     .table-container { background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px; overflow-x: auto; margin-bottom: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
@@ -45,7 +50,6 @@
     .badge { display: inline-block; padding: 2px 6px; border-radius: 4px; font-size: 0.75rem; font-weight: 600; }
     .badge-yield { background: #eff6ff; color: #1d4ed8; }
     .badge-month { background: #fef3c7; color: #b45309; }
-    .badge-auto { background: #dcfce7; color: #15803d; font-size: 0.7rem; margin-left: 4px; }
 
     .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 200; justify-content: center; align-items: center; padding: 16px; }
     .modal { background: white; border-radius: 10px; padding: 20px; width: 100%; max-width: 560px; max-height: 90vh; overflow-y: auto; }
@@ -60,12 +64,18 @@
   <header>
     <h1>個別株 利回り・優待アナライザー</h1>
     <div class="header-btns">
-      <button class="btn btn-import" onclick="openImportModal()">📥 一括取込 (CSV/貼付)</button>
+      <button class="btn btn-sync" onclick="syncAllFromWeb()">🌐 Webから一括情報収集</button>
+      <button class="btn btn-import" onclick="openImportModal()">📥 CSV/一覧取込</button>
       <button class="btn btn-white" onclick="openAddModal()">＋ 手動追加</button>
     </div>
   </header>
 
   <div class="container">
+    <div id="syncStatusText">Webから最新データを取得中... (0/0)</div>
+    <div class="progress-bar-container" id="progressContainer">
+      <div class="progress-bar" id="progressBar"></div>
+    </div>
+
     <div class="dashboard-grid">
       <div class="stat-card">
         <span>ポートフォリオ評価額</span>
@@ -123,11 +133,11 @@
       <h2 style="font-size: 1.05rem; margin-bottom: 8px;">証券会社データの一括取込</h2>
       <p style="font-size: 0.8rem; color: var(--text-sub); margin-bottom: 12px;">
         CSVファイルを選択するか、証券会社の保有残高一覧をコピーして貼り付けてください。<br>
-        <strong>※コードから配当・優待・権利月データを自動照合してセットします。</strong>
+        取り込み後、全上場銘柄のWeb情報収集が自動で開始されます。
       </p>
 
       <div class="form-group">
-        <label>CSVファイルを選択（Shift_JIS / UTF-8両対応）</label>
+        <label>CSVファイルを選択</label>
         <input type="file" id="csvFileInput" accept=".csv, .txt" onchange="handleFileSelect(this)" style="font-size: 0.85rem;">
       </div>
 
@@ -138,7 +148,7 @@
 
       <div style="display: flex; gap: 8px; margin-top: 14px;">
         <button class="btn" style="background: #e2e8f0; flex: 1;" onclick="closeImportModal()">キャンセル</button>
-        <button class="btn btn-primary" style="flex: 1;" onclick="processImport()">自動照合して取込</button>
+        <button class="btn btn-primary" style="flex: 1;" onclick="processImport()">取り込んでWeb取得開始</button>
       </div>
     </div>
   </div>
@@ -152,7 +162,7 @@
       <div class="form-row">
         <div class="form-group">
           <label>証券コード（4桁）</label>
-          <input type="text" id="code" placeholder="例: 3197" oninput="lookupCode(this.value)">
+          <input type="text" id="code" placeholder="例: 3197">
         </div>
         <div class="form-group">
           <label>銘柄名</label>
@@ -178,7 +188,7 @@
         </div>
         <div class="form-group">
           <label>1株あたり年間配当（円）</label>
-          <input type="number" id="dps" placeholder="例: 17">
+          <input type="number" id="dps" placeholder="例: 17.5">
         </div>
       </div>
 
@@ -195,7 +205,7 @@
 
       <div class="form-group">
         <label>優待内容メモ</label>
-        <input type="text" id="yutaiDesc" placeholder="例: 食事割引カード2,000円×年2回">
+        <input type="text" id="yutaiDesc" placeholder="例: 食事割引カード4,000円分">
       </div>
 
       <div style="display: flex; gap: 8px; margin-top: 18px;">
@@ -206,68 +216,11 @@
   </div>
 
   <script>
-    /* 主要・人気優待銘柄の配当・優待・権利月マスターデータベース（100株基準目安） */
-    const STOCK_MASTER = {
-      // 外食
-      '3197': { name: 'すかいらーくHD', dps: 17.5, yutai: 4000, months: '6月, 12月', desc: '飲食割引カード4,000円分' },
-      '9861': { name: '吉野家HD', dps: 20, yutai: 4000, months: '2月, 8月', desc: '飲食商品券4,000円分' },
-      '2702': { name: '日本マクドナルドHD', dps: 42, yutai: 10000, months: '6月, 12月', desc: '優待食事券2冊(約1万円相当)' },
-      '3387': { name: 'クリエイト・レストランツHD', dps: 8, yutai: 4000, months: '2月, 8月', desc: '食事券4,000円分' },
-      '3543': { name: 'コメダHD', dps: 54, yutai: 2000, months: '2月, 8月', desc: 'KOMECAチャージ2,000円分' },
-      '7616': { name: 'コロワイド', dps: 5, yutai: 40000, months: '3月, 9月', desc: '優待ポイント(500株〜)' },
-      '7550': { name: 'ゼンショーHD', dps: 50, yutai: 2000, months: '3月, 9月', desc: '食事ご優待券2,000円分' },
-      '3088': { name: 'マツキヨココカラ＆カンパニー', dps: 92, yutai: 4000, months: '3月, 9月', desc: '商品券4,000円分' },
-      '7421': { name: 'カッパ・クリエイト', dps: 0, yutai: 6000, months: '3月, 9月', desc: '優待ポイント6,000円分' },
-      '8173': { name: '上新電機', dps: 100, yutai: 5000, months: '9月', desc: '買物優待券(200円券25枚)' },
-
-      // 小売・流通・買物
-      '3048': { name: 'ビックカメラ', dps: 24, yutai: 3000, months: '2月, 8月', desc: '買物優待券3,000円分(長期優遇有)' },
-      '8267': { name: 'イオン', dps: 40, yutai: 6000, months: '2月, 8月', desc: 'オーナーズカード3%返金キャッシュバック' },
-      '7512': { name: 'イオン北海道', dps: 14, yutai: 2500, months: '2月', desc: '優待買物割引券2,500円分' },
-      '2685': { name: 'アダストリア', dps: 90, yutai: 3000, months: '2月', desc: '商品引換券3,000円分' },
-      '2792': { name: 'ハニーズHD', dps: 55, yutai: 3000, months: '5月', desc: '優待商品券3,000円分' },
-      '3099': { name: '三越伊勢丹HD', dps: 46, yutai: 10000, months: '3月, 9月', desc: 'お買物10%割引カード' },
-      '8252': { name: '丸井グループ', dps: 105, yutai: 2000, months: '3月, 9月', desc: 'エポスポイント2,000P' },
-
-      // 金融・リース・総合商社
-      '8591': { name: 'オリックス', dps: 120, yutai: 0, months: '3月, 9月', desc: '高配当(優待は終了)' },
-      '8411': { name: 'みずほFG', dps: 130, yutai: 0, months: '3月, 9月', desc: '高配当金融' },
-      '8306': { name: '三菱UFJ FG', dps: 50, yutai: 0, months: '3月, 9月', desc: '高配当メガバンク' },
-      '8316': { name: '三井住友FG', dps: 110, yutai: 0, months: '3月, 9月', desc: '高配当メガバンク' },
-      '8473': { name: 'SBIホールディングス', dps: 160, yutai: 2000, months: '3月', desc: '暗号資産XRPまたは健康補助食品' },
-      '8058': { name: '三菱商事', dps: 100, yutai: 0, months: '3月, 9月', desc: '累進配当・高利回り' },
-      '8001': { name: '伊藤忠商事', dps: 200, yutai: 0, months: '3月, 9月', desc: '累進配当' },
-      '8031': { name: '三井物産', dps: 100, yutai: 0, months: '3月, 9月', desc: '高配当商社' },
-
-      // 通信・交通・その他
-      '9432': { name: 'NTT', dps: 5.2, yutai: 1500, months: '3月, 9月', desc: 'dポイント付与(長期保有時)' },
-      '9433': { name: 'KDDI', dps: 145, yutai: 2000, months: '3月', desc: 'カタログギフト/Pontaポイント' },
-      '9434': { name: 'ソフトバンク', dps: 8.6, yutai: 1000, months: '3月, 9月', desc: 'PayPayポイント1,000P(1年保有)' },
-      '9202': { name: 'ANAホールディングス', dps: 50, yutai: 5000, months: '3月, 9月', desc: '国内線50%割引優待番号券' },
-      '9201': { name: '日本航空（JAL）', dps: 75, yutai: 4000, months: '3月, 9月', desc: '国内線50%割引株主割引券' },
-      '9020': { name: 'JR東日本', dps: 55, yutai: 4000, months: '3月', desc: '株主優待割引券40%割引' },
-      '9022': { name: 'JR東海', dps: 22, yutai: 2000, months: '3月', desc: '運賃10%割引券' },
-      '4912': { name: 'ライオン', dps: 27, yutai: 2500, months: '12月', desc: '自社新製品詰め合わせセット' },
-      '2802': { name: '味の素', dps: 74, yutai: 1500, months: '3月', desc: '自社製品詰め合わせ(半年保有)' }
-    };
-
     let stockList = JSON.parse(localStorage.getItem('my_stock_portfolio_v1') || '[]');
 
     function saveToStorage() {
       localStorage.setItem('my_stock_portfolio_v1', JSON.stringify(stockList));
       render();
-    }
-
-    function lookupCode(val) {
-      const code = val.trim();
-      if (STOCK_MASTER[code]) {
-        const m = STOCK_MASTER[code];
-        document.getElementById('name').value = m.name;
-        document.getElementById('dps').value = m.dps;
-        document.getElementById('yutaiVal').value = m.yutai;
-        document.getElementById('recordMonths').value = m.months;
-        document.getElementById('yutaiDesc').value = m.desc;
-      }
     }
 
     function openAddModal() {
@@ -308,7 +261,100 @@
       reader.readAsText(file, 'Shift_JIS');
     }
 
-    /* 自動照合付きインポート */
+    /* Webから単一銘柄の配当・優待・権利確定月をスクレイピング取得 */
+    async function fetchStockFromWeb(code) {
+      if (!code || !code.match(/^\d{4}$/)) return null;
+      try {
+        // CORS回避用プロキシを経由してKabutanの基本情報を取得
+        const targetUrl = `https://kabutan.jp/stock/?code=${code}`;
+        const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(targetUrl)}`;
+        const res = await fetch(proxyUrl);
+        const data = await res.json();
+        const html = data.contents;
+
+        if (!html) return null;
+
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(html, 'text/html');
+
+        // 1株配当（DPS）と利回りの抽出
+        let dps = 0;
+        let months = '';
+        let yutaiDesc = '';
+
+        // 配当金の探索
+        const ths = doc.querySelectorAll('th');
+        ths.forEach(th => {
+          if (th.textContent.includes('1株配当') || th.textContent.includes('配当金')) {
+            const td = th.nextElementSibling;
+            if (td) {
+              const val = parseFloat(td.textContent.replace(/[^0-9.]/g, ''));
+              if (!isNaN(val)) dps = val;
+            }
+          }
+          if (th.textContent.includes('決算月') || th.textContent.includes('権利確定')) {
+            const td = th.nextElementSibling;
+            if (td) months = td.textContent.trim();
+          }
+        });
+
+        // 権利月が空の場合の代替抽出
+        if (!months) {
+          const mMatch = html.match(/(?:決算|権利確定)[^\d]*(\d{1,2})月/);
+          if (mMatch) months = mMatch[1] + '月';
+        }
+
+        // 優待有無の判定
+        if (html.includes('株主優待') || html.includes('優待情報')) {
+          yutaiDesc = '株主優待制度あり';
+        }
+
+        return { dps, months, yutaiDesc };
+      } catch (e) {
+        console.warn('Web取得スキップ:', code, e);
+        return null;
+      }
+    }
+
+    /* 保有銘柄すべてをWebから一括収集 */
+    async function syncAllFromWeb() {
+      if (stockList.length === 0) {
+        alert('取得対象の銘柄がありません。先にCSVまたは手動で銘柄を追加してください。');
+        return;
+      }
+
+      const pContainer = document.getElementById('progressContainer');
+      const pBar = document.getElementById('progressBar');
+      const statusText = document.getElementById('syncStatusText');
+      pContainer.style.display = 'block';
+      statusText.style.display = 'block';
+
+      let count = 0;
+      for (let i = 0; i < stockList.length; i++) {
+        const item = stockList[i];
+        if (item.code) {
+          statusText.textContent = `Webから最新データを収集中: ${item.name} (${item.code}) [${i+1}/${stockList.length}]`;
+          pBar.style.width = `${((i+1) / stockList.length) * 100}%`;
+
+          const webData = await fetchStockFromWeb(item.code);
+          if (webData) {
+            if (webData.dps > 0) item.dps = webData.dps;
+            if (webData.months) item.recordMonths = webData.months;
+            if (webData.yutaiDesc && !item.yutaiDesc) item.yutaiDesc = webData.yutaiDesc;
+            count++;
+          }
+          // 相手先サーバーに負荷をかけないよう少し待機（ウェイト）
+          await new Promise(r => setTimeout(r, 400));
+        }
+      }
+
+      saveToStorage();
+      pContainer.style.display = 'none';
+      statusText.style.display = 'none';
+      alert(`Webからの情報収集が完了しました！（${count} 銘柄のデータを更新）`);
+    }
+
+    /* CSV取込処理 */
     function processImport() {
       const raw = document.getElementById('importRawText').value.trim();
       if (!raw) {
@@ -350,29 +396,17 @@
         }
 
         if (code || name) {
-          // マスターデータから自動照合
-          let autoMaster = STOCK_MASTER[code] || null;
-          if (!autoMaster) {
-            for (const [k, v] of Object.entries(STOCK_MASTER)) {
-              if (name && (name.includes(v.name) || v.name.includes(name))) {
-                autoMaster = v;
-                if (!code) code = k;
-                break;
-              }
-            }
-          }
-
           stockList.push({
             id: Date.now().toString() + Math.random().toString(36).substr(2, 4),
             code: code,
-            name: name || (autoMaster ? autoMaster.name : '不明'),
+            name: name,
             shares: shares || 100,
             buyPrice: buyPrice || 0,
             currentPrice: currentPrice || buyPrice || 0,
-            dps: autoMaster ? autoMaster.dps : 0,
-            yutaiVal: autoMaster ? autoMaster.yutai : 0,
-            recordMonths: autoMaster ? autoMaster.months : '',
-            yutaiDesc: autoMaster ? autoMaster.desc : ''
+            dps: 0,
+            yutaiVal: 0,
+            recordMonths: '',
+            yutaiDesc: ''
           });
           importedCount++;
         }
@@ -381,9 +415,10 @@
       if (importedCount > 0) {
         saveToStorage();
         closeImportModal();
-        alert(importedCount + ' 件の銘柄を取り込みました！\n該当する銘柄の配当金・優待・利回りが自動反映されました。');
+        // 取込後、直ちにWebからの情報収集を開始
+        syncAllFromWeb();
       } else {
-        alert('データを読み取れませんでした。形式をご確認ください。');
+        alert('データを読み取れませんでした。');
       }
     }
 
@@ -486,7 +521,7 @@
           <td>
             <strong>${item.name}</strong> 
             <span style="font-size: 0.75rem; color: var(--text-sub);">${item.code || '-'}</span>
-            ${item.yutaiDesc ? `<div style="font-size: 0.75rem; color: var(--text-sub); margin-top: 2px;">🎁 ${item.yutaiDesc}</div>` : ''}
+            ${item.yutaiDesc ? `<div style="font-size: 0.75rem; color: #0284c7; margin-top: 2px;">🎁 ${item.yutaiDesc}</div>` : ''}
           </td>
           <td>
             ${item.shares.toLocaleString()} 株<br>
