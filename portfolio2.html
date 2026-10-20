@@ -27,7 +27,7 @@
     .btn-primary { background: var(--accent); color: white; }
     .btn-danger { background: #fee2e2; color: var(--danger); border: 1px solid #fecaca; }
     .btn-sm { padding: 4px 8px; font-size: 0.75rem; }
-    .container { max-width: 1120px; margin: 16px auto; padding: 0 12px; }
+    .container { max-width: 1140px; margin: 16px auto; padding: 0 12px; }
 
     .dashboard-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-bottom: 20px; }
     .stat-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; }
@@ -38,18 +38,19 @@
 
     .section-title { font-size: 1rem; font-weight: bold; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
     .table-container { background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px; overflow-x: auto; margin-bottom: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
-    table { width: 100%; border-collapse: collapse; text-align: left; font-size: 0.85rem; min-width: 900px; }
+    table { width: 100%; border-collapse: collapse; text-align: left; font-size: 0.85rem; min-width: 940px; }
     th { background: #f1f5f9; padding: 10px 12px; font-weight: 600; color: var(--text-sub); border-bottom: 1px solid var(--border); }
     td { padding: 12px; border-bottom: 1px solid var(--border); vertical-align: middle; }
     tr:last-child td { border-bottom: none; }
     .badge { display: inline-block; padding: 3px 7px; border-radius: 4px; font-size: 0.75rem; font-weight: 600; }
     .badge-yield { background: #eff6ff; color: #1d4ed8; }
     .badge-month { background: #fef3c7; color: #b45309; }
-    
-    .yutai-box { display: flex; flex-direction: column; gap: 4px; }
-    .yutai-text { font-size: 0.82rem; color: #1e293b; font-weight: 500; }
-    .btn-check-site { display: inline-flex; align-items: center; gap: 3px; background: #e0f2fe; color: #0369a1; padding: 2px 7px; border-radius: 4px; font-size: 0.72rem; text-decoration: none; font-weight: 600; width: fit-content; }
-    .btn-check-site:hover { background: #bae6fd; }
+
+    .site-links { display: flex; gap: 6px; margin-top: 5px; flex-wrap: wrap; }
+    .btn-site { display: inline-flex; align-items: center; background: #e0f2fe; color: #0369a1; padding: 2px 7px; border-radius: 4px; font-size: 0.72rem; text-decoration: none; font-weight: 600; }
+    .btn-site:hover { background: #bae6fd; }
+    .btn-site-yahoo { background: #fef2f2; color: #b91c1c; }
+    .btn-site-yahoo:hover { background: #fee2e2; }
 
     .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 200; justify-content: center; align-items: center; padding: 16px; }
     .modal { background: white; border-radius: 10px; padding: 20px; width: 100%; max-width: 560px; max-height: 90vh; overflow-y: auto; }
@@ -105,8 +106,8 @@
             <th>保有数 / 取得単価</th>
             <th>現在値 / 損益</th>
             <th>配当利回り (時価 / 簿価)</th>
-            <th style="min-width: 240px;">株主優待の概要・サイト確認</th>
-            <th>権利月</th>
+            <th style="min-width: 260px;">株主優待の概要 ＆ 各サイト照会</th>
+            <th>権利確定月</th>
             <th style="text-align: center;">操作</th>
           </tr>
         </thead>
@@ -123,7 +124,7 @@
       <h2 style="font-size: 1.05rem; margin-bottom: 8px;">証券会社データの一括取込</h2>
       <p style="font-size: 0.8rem; color: var(--text-sub); margin-bottom: 12px;">
         CSVファイルを選択するか、証券会社の保有残高一覧をコピーして貼り付けてください。<br>
-        <strong>※取り込み後、各銘柄から優待サイトの最新詳細ページを直接確認・登録できます。</strong>
+        <strong>※取り込み後、各銘柄ごとに株探やYahoo!ファイナンスの優待ページを直接確認できます。</strong>
       </p>
 
       <div class="form-group">
@@ -133,7 +134,7 @@
 
       <div class="form-group">
         <label>または表のテキストを貼り付け</label>
-        <textarea id="importRawText" rows="6" placeholder="銘柄コード, 銘柄名, 保有株数, 取得単価, 現在株価&#10;例:&#10;3197, すかいらーくHD, 100, 2000, 2350&#10;9861, 吉野家HD, 100, 2800, 3100&#10;8591, オリックス, 100, 2500, 3400"></textarea>
+        <textarea id="importRawText" rows="6" placeholder="銘柄コード, 銘柄名, 保有株数, 取得単価, 現在株価&#10;例:&#10;3197, すかいらーくHD, 100, 2000, 2350&#10;9861, 吉野家HD, 100, 2800, 3100"></textarea>
       </div>
 
       <div style="display: flex; gap: 8px; margin-top: 14px;">
@@ -152,7 +153,7 @@
       <div class="form-row">
         <div class="form-group">
           <label>証券コード（4桁）</label>
-          <input type="text" id="code" placeholder="例: 3197" oninput="lookupCode(this.value)">
+          <input type="text" id="code" placeholder="例: 3197">
         </div>
         <div class="form-group">
           <label>銘柄名</label>
@@ -189,7 +190,7 @@
 
       <div class="form-group">
         <label>株主優待の概要</label>
-        <input type="text" id="yutaiDesc" placeholder="例: 飲食割引カード4,000円分（2,000円×年2回）">
+        <input type="text" id="yutaiDesc" placeholder="例: 食事割引カード4,000円分（2,000円×年2回）">
       </div>
 
       <div style="display: flex; gap: 8px; margin-top: 18px;">
@@ -200,55 +201,11 @@
   </div>
 
   <script>
-    /* 主要優待銘柄・高配当銘柄の優待概要＆配当マスター */
-    const STOCK_MASTER = {
-      '3197': { name: 'すかいらーくHD', dps: 17.5, months: '6月, 12月', desc: '飲食割引カード4,000円分（年2回）' },
-      '9861': { name: '吉野家HD', dps: 20, months: '2月, 8月', desc: '飲食商品券4,000円分（年2回）' },
-      '2702': { name: '日本マクドナルドHD', dps: 42, months: '6月, 12月', desc: '優待食事券（バーガー・サイド・ドリンク引換券）' },
-      '3387': { name: 'クリエイト・レストランツHD', dps: 8, months: '2月, 8月', desc: 'グループ店舗食事券4,000円分（年2回）' },
-      '3543': { name: 'コメダHD', dps: 54, months: '2月, 8月', desc: '電子マネーKOMECAチャージ2,000円分' },
-      '7616': { name: 'コロワイド', dps: 5, months: '3月, 9月', desc: '優待ポイント（500株以上で年40,000P）' },
-      '7550': { name: 'ゼンショーHD', dps: 50, months: '3月, 9月', desc: '食事ご優待券2,000円分' },
-      '3088': { name: 'マツキヨココカラ', dps: 92, months: '3月, 9月', desc: '自社グループ商品券4,000円分' },
-      '7421': { name: 'カッパ・クリエイト', dps: 0, months: '3月, 9月', desc: 'コロワイド共通ポイント6,000P' },
-      '3048': { name: 'ビックカメラ', dps: 24, months: '2月, 8月', desc: '買物優待券3,000円分（長期優遇有）' },
-      '8267': { name: 'イオン', dps: 40, months: '2月, 8月', desc: 'オーナーズカード（買物3%返金キャッシュバック）' },
-      '7512': { name: 'イオン北海道', dps: 14, months: '2月', desc: '買物割引券2,500円分（1,000円毎に100円引）' },
-      '2685': { name: 'アダストリア', dps: 90, months: '2月', desc: '商品引換券3,000円分' },
-      '3099': { name: '三越伊勢丹HD', dps: 46, months: '3月, 9月', desc: 'お買物10%割引カード' },
-      '8252': { name: '丸井グループ', dps: 105, months: '3月, 9月', desc: 'エポスポイント2,000P' },
-      '8591': { name: 'オリックス', dps: 120, months: '3月, 9月', desc: '（優待廃止・高配当還元）' },
-      '8411': { name: 'みずほFG', dps: 130, months: '3月, 9月', desc: '優待なし（高配当メガバンク）' },
-      '8306': { name: '三菱UFJ FG', dps: 50, months: '3月, 9月', desc: '優待なし（高配当メガバンク）' },
-      '8316': { name: '三井住友FG', dps: 110, months: '3月, 9月', desc: '優待なし（累進高配当）' },
-      '8473': { name: 'SBIホールディングス', dps: 160, months: '3月', desc: '暗号資産XRPまたは健康食品' },
-      '8058': { name: '三菱商事', dps: 100, months: '3月, 9月', desc: '優待なし（累進配当）' },
-      '8001': { name: '伊藤忠商事', dps: 200, months: '3月, 9月', desc: '優待なし（累進配当）' },
-      '9432': { name: 'NTT', dps: 5.2, months: '3月, 9月', desc: 'dポイント付与（2年・5年目）' },
-      '9433': { name: 'KDDI', dps: 145, months: '3月', desc: 'カタログギフト／Pontaポイント等' },
-      '9434': { name: 'ソフトバンク', dps: 8.6, months: '3月, 9月', desc: 'PayPayポイント1,000P（1年保有）' },
-      '9202': { name: 'ANA HD', dps: 50, months: '3月, 9月', desc: '国内線50%割引株主優待番号券（年2回）' },
-      '9201': { name: '日本航空（JAL）', dps: 75, months: '3月, 9月', desc: '国内線50%割引株主割引券' },
-      '9020': { name: 'JR東日本', dps: 55, months: '3月', desc: '鉄道株主優待割引券（40%割引）' },
-      '2914': { name: 'JT', dps: 194, months: '6月, 12月', desc: '（優待終了・高配当）' }
-    };
-
     let stockList = JSON.parse(localStorage.getItem('my_stock_portfolio_v1') || '[]');
 
     function saveToStorage() {
       localStorage.setItem('my_stock_portfolio_v1', JSON.stringify(stockList));
       render();
-    }
-
-    function lookupCode(val) {
-      const code = val.trim();
-      if (STOCK_MASTER[code]) {
-        const m = STOCK_MASTER[code];
-        document.getElementById('name').value = m.name;
-        document.getElementById('dps').value = m.dps;
-        document.getElementById('recordMonths').value = m.months;
-        document.getElementById('yutaiDesc').value = m.desc;
-      }
     }
 
     function openAddModal() {
@@ -258,7 +215,7 @@
       document.getElementById('shares').value = '';
       document.getElementById('buyPrice').value = '';
       document.getElementById('currentPrice').value = '';
-      document.getElementById('dps').value = '0';
+      document.getElementById('dps').value = '';
       document.getElementById('recordMonths').value = '';
       document.getElementById('yutaiDesc').value = '';
       document.getElementById('addModal').style.display = 'flex';
@@ -329,31 +286,16 @@
         }
 
         if (code || name) {
-          let master = STOCK_MASTER[code] || null;
-          if (!master) {
-            for (const [k, v] of Object.entries(STOCK_MASTER)) {
-              if (name && (name.includes(v.name) || v.name.includes(name))) {
-                master = v;
-                if (!code) code = k;
-                break;
-              }
-            }
-          }
-
-          const estDps = master ? master.dps : (currentPrice > 0 ? Math.round(currentPrice * 0.028) : 25);
-          const estMonths = master ? master.months : '3月, 9月';
-          const estDesc = master ? master.desc : '';
-
           stockList.push({
             id: Date.now().toString() + Math.random().toString(36).substr(2, 4),
             code: code,
-            name: name || (master ? master.name : `銘柄(${code})`),
+            name: name,
             shares: shares || 100,
             buyPrice: buyPrice || 0,
-            currentPrice: currentPrice || buyPrice || 1000,
-            dps: estDps,
-            recordMonths: estMonths,
-            yutaiDesc: estDesc
+            currentPrice: currentPrice || buyPrice || 0,
+            dps: 0,
+            recordMonths: '',
+            yutaiDesc: ''
           });
           importedCount++;
         }
@@ -362,7 +304,7 @@
       if (importedCount > 0) {
         saveToStorage();
         closeImportModal();
-        alert(`${importedCount} 件の銘柄を取り込みました！`);
+        alert(`${importedCount} 件の銘柄を取り込みました！\n各銘柄の「🔍 株探で確認」または「Yahoo!で確認」ボタンから最新の優待・配当情報を確認できます。`);
       } else {
         alert('データを読み取れませんでした。形式をご確認ください。');
       }
@@ -377,7 +319,7 @@
       document.getElementById('shares').value = s.shares;
       document.getElementById('buyPrice').value = s.buyPrice;
       document.getElementById('currentPrice').value = s.currentPrice;
-      document.getElementById('dps').value = s.dps || 0;
+      document.getElementById('dps').value = s.dps || '';
       document.getElementById('recordMonths').value = s.recordMonths || '';
       document.getElementById('yutaiDesc').value = s.yutaiDesc || '';
       document.getElementById('addModal').style.display = 'flex';
@@ -453,8 +395,9 @@
         const profitClass = profit >= 0 ? 'color: var(--success);' : 'color: var(--danger);';
         const sign = profit >= 0 ? '+' : '';
 
-        // 優待確認サイトへのリンクURL（株探の優待詳細ページ）
-        const yutaiSiteUrl = item.code ? `https://kabutan.jp/stock/holder/?code=${item.code}` : '#';
+        // 各サイトへの直接確認URL
+        const kabutanUrl = item.code ? `https://kabutan.jp/stock/holder/?code=${item.code}` : '#';
+        const yahooUrl = item.code ? `https://finance.yahoo.co.jp/quote/${item.code}.T` : '#';
 
         const tr = document.createElement('tr');
         tr.innerHTML = `
@@ -477,21 +420,26 @@
               時価: ${marketYield.toFixed(2)}%
             </span>
             <div style="font-size: 0.75rem; color: var(--text-sub); margin-top: 3px;">
-              簿価: ${bookYield.toFixed(2)}% (年${Math.round(annualDiv).toLocaleString()}円)
+              簿価: ${bookYield.toFixed(2)}% ${item.dps > 0 ? `(年${Math.round(annualDiv).toLocaleString()}円)` : ''}
             </div>
           </td>
           <td>
-            <div class="yutai-box">
-              <span class="yutai-text">${item.yutaiDesc || '（優待メモ未登録）'}</span>
-              ${item.code ? `
-                <a href="${yutaiSiteUrl}" target="_blank" rel="noopener noreferrer" class="btn-check-site">
-                  🔍 サイトで優待を確認 ↗
+            <div style="margin-bottom: 4px; font-weight: 500;">
+              ${item.yutaiDesc ? `🎁 ${item.yutaiDesc}` : '<span style="color: var(--text-sub);">（優待内容未登録）</span>'}
+            </div>
+            ${item.code ? `
+              <div class="site-links">
+                <a href="${kabutanUrl}" target="_blank" rel="noopener noreferrer" class="btn-site">
+                  🔍 株探で優待確認 ↗
                 </a>
-              ` : ''}
-            </div>
+                <a href="${yahooUrl}" target="_blank" rel="noopener noreferrer" class="btn-site btn-site-yahoo">
+                  📊 Yahoo!で確認 ↗
+                </a>
+              </div>
+            ` : ''}
           </td>
           <td>
-            ${item.recordMonths ? `<span class="badge badge-month">${item.recordMonths}</span>` : '-'}
+            ${item.recordMonths ? `<span class="badge badge-month">${item.recordMonths}</span>` : '<span style="color: var(--text-sub); font-size: 0.75rem;">-</span>'}
           </td>
           <td style="text-align: center;">
             <div style="display: flex; gap: 4px; justify-content: center;">
