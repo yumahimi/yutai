@@ -3,198 +3,238 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>株主優待管理ウォレット</title>
-  <!-- QRコード解析用ライブラリ -->
-  <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+  <title>株主優待ウォレット</title>
   <style>
     :root {
-      --primary: #1e3a8a;
-      --primary-light: #eff6ff;
-      --accent: #7c3aed;
-      --danger: #dc2626;
-      --gray-bg: #f8fafc;
+      --primary: #1e293b;
+      --accent: #059669;
+      --bg: #f8fafc;
       --card-bg: #ffffff;
       --border: #e2e8f0;
       --text: #0f172a;
       --text-sub: #64748b;
+      --danger: #ef4444;
+      --warning: #f59e0b;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
-    body { background-color: var(--gray-bg); color: var(--text); padding-bottom: 60px; }
-    header { background-color: var(--primary); color: white; padding: 14px 16px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-    header h1 { font-size: 1.1rem; font-weight: bold; }
-    .header-btns { display: flex; gap: 8px; }
-    .btn { cursor: pointer; padding: 8px 14px; border-radius: 6px; font-weight: 600; border: none; font-size: 0.85rem; transition: background 0.2s; }
+    body { background-color: var(--bg); color: var(--text); padding-bottom: 70px; }
+    header { background-color: var(--primary); color: white; padding: 14px 20px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+    header h1 { font-size: 1.05rem; font-weight: bold; }
+    .btn { cursor: pointer; padding: 7px 14px; border-radius: 6px; font-weight: 600; border: none; font-size: 0.85rem; transition: background 0.2s; }
+    .btn-primary { background: var(--accent); color: white; }
     .btn-white { background: white; color: var(--primary); }
-    .btn-qr { background: var(--accent); color: white; }
-    .btn-primary { background: var(--primary); color: white; width: 100%; padding: 10px; }
+    .btn-danger { background: #fee2e2; color: var(--danger); border: 1px solid #fecaca; }
     .btn-sm { padding: 4px 8px; font-size: 0.75rem; }
-    .container { max-width: 800px; margin: 16px auto; padding: 0 12px; }
-    .summary-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
-    .summary-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px; padding: 12px; }
-    .summary-card span { font-size: 0.75rem; color: var(--text-sub); display: block; margin-bottom: 2px; }
-    .summary-card strong { font-size: 1.2rem; color: var(--primary); }
-    .summary-card.alert strong { color: var(--danger); }
-    .empty-state { background: var(--card-bg); border: 2px dashed var(--border); border-radius: 12px; padding: 36px 16px; text-align: center; margin-top: 16px; }
-    .empty-state p { color: var(--text-sub); font-size: 0.85rem; margin-bottom: 16px; }
-    .empty-actions { display: flex; flex-direction: column; gap: 10px; max-width: 280px; margin: 0 auto; }
-    .group-block { margin-bottom: 20px; }
-    .group-header { display: flex; justify-content: space-between; align-items: center; padding: 8px 10px; background: #e2e8f0; border-radius: 6px; font-weight: bold; font-size: 0.85rem; margin-bottom: 8px; }
-    .group-header.alert { background: #fee2e2; color: #991b1b; }
-    .yutai-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px; padding: 12px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
-    .yutai-info h3 { font-size: 0.95rem; margin-bottom: 3px; display: flex; align-items: center; gap: 6px; }
-    .badge { font-size: 0.7rem; padding: 1px 5px; border-radius: 4px; background: #e0f2fe; color: #0369a1; }
-    .yutai-meta { font-size: 0.8rem; color: var(--text-sub); }
-    .yutai-actions { display: flex; align-items: center; gap: 8px; }
-    .yutai-balance { text-align: right; }
-    .yutai-balance strong { font-size: 1.1rem; color: var(--text); display: block; }
-    .btn-delete { background: #fee2e2; color: var(--danger); border: 1px solid #fecaca; }
-    .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 200; justify-content: center; align-items: center; padding: 16px; }
-    .modal { background: white; border-radius: 10px; padding: 18px; width: 100%; max-width: 480px; max-height: 90vh; overflow-y: auto; }
+    .container { max-width: 900px; margin: 16px auto; padding: 0 12px; }
+
+    .dashboard-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; margin-bottom: 20px; }
+    .stat-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; }
+    .stat-card span { font-size: 0.75rem; color: var(--text-sub); display: block; margin-bottom: 4px; }
+    .stat-card strong { font-size: 1.25rem; color: var(--text); display: block; }
+    .stat-card.highlight strong { color: var(--accent); }
+    .stat-card.warning strong { color: var(--warning); }
+
+    .section-title { font-size: 1rem; font-weight: bold; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; }
+    .yutai-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
+    .yutai-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px; padding: 14px; position: relative; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+    .yutai-card.used { opacity: 0.55; background: #f1f5f9; }
+    .card-head { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
+    .card-name { font-size: 0.95rem; font-weight: bold; }
+    .card-code { font-size: 0.75rem; color: var(--text-sub); margin-left: 4px; }
+    .badge { display: inline-block; padding: 2px 6px; border-radius: 4px; font-size: 0.72rem; font-weight: 600; }
+    .badge-category { background: #e0f2fe; color: #0369a1; }
+    .badge-alert { background: #fee2e2; color: #dc2626; }
+    .badge-ok { background: #dcfce7; color: #15803d; }
+    .card-desc { font-size: 0.85rem; color: var(--text); margin-bottom: 10px; line-height: 1.4; }
+    .card-meta { font-size: 0.78rem; color: var(--text-sub); margin-bottom: 12px; display: flex; justify-content: space-between; }
+    .card-actions { display: flex; gap: 6px; justify-content: flex-end; align-items: center; border-top: 1px solid var(--border); padding-top: 10px; }
+
+    .site-links { display: flex; gap: 6px; margin-bottom: 12px; flex-wrap: wrap; }
+    .site-link { display: inline-flex; align-items: center; background: #e0f2fe; color: #0369a1; padding: 3px 8px; border-radius: 4px; font-size: 0.72rem; text-decoration: none; font-weight: 600; }
+    .site-link:hover { background: #bae6fd; }
+    .site-link-yahoo { background: #fef2f2; color: #b91c1c; }
+    .site-link-yahoo:hover { background: #fee2e2; }
+
+    .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 200; justify-content: center; align-items: center; padding: 16px; }
+    .modal { background: white; border-radius: 10px; padding: 20px; width: 100%; max-width: 500px; max-height: 90vh; overflow-y: auto; }
     .form-group { margin-bottom: 12px; }
-    .form-group label { display: block; font-size: 0.8rem; font-weight: 600; margin-bottom: 3px; }
-    .form-group input, .form-group select { width: 100%; padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 0.9rem; }
-    .auto-filled-alert { background: #e0f2fe; color: #0369a1; font-size: 0.75rem; padding: 4px 6px; border-radius: 4px; margin-top: 3px; display: none; }
-    #videoContainer { position: relative; width: 100%; height: 260px; background: #000; border-radius: 8px; overflow: hidden; margin-bottom: 12px; }
-    #cameraVideo { width: 100%; height: 100%; object-fit: cover; }
-    .scan-line { position: absolute; top: 15%; left: 10%; width: 80%; height: 2px; background: #22c55e; box-shadow: 0 0 8px #22c55e; animation: scan 2s linear infinite; }
-    @keyframes scan { 0% { top: 15%; } 50% { top: 85%; } 100% { top: 15%; } }
+    .form-group label { display: block; font-size: 0.8rem; font-weight: 600; margin-bottom: 4px; }
+    .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 0.9rem; }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .loading-text { font-size: 0.75rem; color: var(--accent); margin-top: 2px; display: none; }
   </style>
 </head>
 <body>
 
   <header>
     <h1>株主優待ウォレット</h1>
-    <div class="header-btns">
-      <button class="btn btn-qr" onclick="openCameraModal()">📷 QR読取</button>
-      <button class="btn btn-white" onclick="openAddModal()">＋ 追加</button>
-    </div>
+    <button class="btn btn-white" onclick="openAddModal()">＋ 優待を登録</button>
   </header>
 
   <div class="container">
-    <div class="summary-grid">
-      <div class="summary-card">
-        <span>総保有残高</span>
-        <strong id="totalBalance">0 円</strong>
+    <div class="dashboard-grid">
+      <div class="stat-card">
+        <span>保有優待件数</span>
+        <strong id="activeCount">0 件</strong>
       </div>
-      <div class="summary-card alert">
-        <span>30日以内失効リスク</span>
-        <strong id="expiringBalance">0 円</strong>
+      <div class="stat-card highlight">
+        <span>利用可能残額</span>
+        <strong id="totalAmount">0 円</strong>
+      </div>
+      <div class="stat-card warning">
+        <span>今月末〜来月末の期限間近</span>
+        <strong id="expiringCount">0 件</strong>
       </div>
     </div>
 
-    <div id="contentArea"></div>
-  </div>
-
-  <!-- QRカメラモーダル -->
-  <div class="modal-overlay" id="cameraModal">
-    <div class="modal" style="text-align: center;">
-      <h2 style="font-size: 1.05rem; margin-bottom: 10px;">優待通知のQRコード読取</h2>
-      <div id="videoContainer">
-        <video id="cameraVideo" playsinline></video>
-        <div class="scan-line"></div>
-      </div>
-      <p style="font-size: 0.8rem; color: var(--text-sub); margin-bottom: 12px;">ハガキや書類のQRコードを枠内に合わせてください</p>
-      
-      <div style="border-top: 1px solid var(--border); padding-top: 10px; margin-bottom: 14px;">
-        <label style="font-size: 0.8rem; font-weight: 600; display: block; margin-bottom: 6px;">写真から読み取る場合</label>
-        <input type="file" accept="image/*" onchange="handleImageQr(this)" style="font-size: 0.8rem;">
-      </div>
-
-      <button class="btn" style="background: #e2e8f0; width: 100%;" onclick="closeCameraModal()">閉じる</button>
+    <div class="section-title">
+      <span>保有優待券・特典一覧</span>
+      <button class="btn btn-sm btn-danger" onclick="clearAllYutai()">全データ初期化</button>
     </div>
+
+    <div class="yutai-grid" id="yutaiGrid"></div>
   </div>
 
-  <!-- 優待追加モーダル -->
+  <!-- 登録・編集モーダル -->
   <div class="modal-overlay" id="addModal">
     <div class="modal">
-      <h2 style="font-size: 1.05rem; margin-bottom: 14px;">株主優待の追加</h2>
-      <div class="form-group">
-        <label>証券コード（4桁）</label>
-        <input type="text" id="secCode" placeholder="例: 3197, 9861, 2702" oninput="handleCodeInput(this.value)">
-        <div id="codeDetectMsg" class="auto-filled-alert"></div>
+      <h2 style="font-size: 1.05rem; margin-bottom: 14px;">優待券の登録・編集</h2>
+      <input type="hidden" id="editId">
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>証券コード（4桁）</label>
+          <input type="text" id="code" placeholder="例: 3197" oninput="handleCodeChange(this.value)">
+          <div id="loadingStatus" class="loading-text">企業名を照会中...</div>
+        </div>
+        <div class="form-group">
+          <label>企業名・銘柄</label>
+          <input type="text" id="name" placeholder="コード入力で自動補完">
+        </div>
       </div>
-      <div class="form-group">
-        <label>銘柄・企業名</label>
-        <input type="text" id="companyName" placeholder="例: すかいらーくホールディングス">
+
+      <div id="siteLinksBox" style="display: none; margin-bottom: 12px;">
+        <span style="font-size: 0.75rem; color: var(--text-sub); display: block; margin-bottom: 4px;">最新の優待内容・権利月を直接確認：</span>
+        <div class="site-links">
+          <a id="linkKabutan" href="#" target="_blank" rel="noopener noreferrer" class="site-link">🔍 株探で優待確認 ↗</a>
+          <a id="linkYahoo" href="#" target="_blank" rel="noopener noreferrer" class="site-link site-link-yahoo">📊 Yahoo!で確認 ↗</a>
+        </div>
       </div>
-      <div class="form-group">
-        <label>カテゴリ</label>
-        <select id="category">
-          <option value="外食">外食</option>
-          <option value="買い物">買物・日用品</option>
-          <option value="旅行">旅行・交通</option>
-          <option value="その他">その他</option>
-        </select>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>ジャンル</label>
+          <select id="category">
+            <option value="食事・飲食">食事・飲食</option>
+            <option value="買物・割引">買物・割引</option>
+            <option value="金券・クオカード">金券・クオカード</option>
+            <option value="自社製品・カタログ">自社製品・カタログ</option>
+            <option value="旅行・交通">旅行・交通</option>
+            <option value="その他">その他</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>金額換算（円）</label>
+          <input type="number" id="amount" placeholder="例: 2000">
+        </div>
       </div>
+
       <div class="form-group">
-        <label>残高・保有額（円）</label>
-        <input type="number" id="balance" placeholder="例: 5000">
+        <label>優待内容メモ（サイトで確認した内容）</label>
+        <input type="text" id="desc" placeholder="例: 飲食割引カード2,000円分×年2回">
       </div>
-      <div class="form-group">
-        <label>有効期限</label>
-        <input type="date" id="expiry">
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>有効期限</label>
+          <input type="date" id="expiry">
+        </div>
+        <div class="form-group">
+          <label>保管場所・利用先</label>
+          <input type="text" id="location" placeholder="例: 財布、カードケース">
+        </div>
       </div>
-      <div class="form-group">
-        <label>ギフトURL（QRから自動読取可能）</label>
-        <input type="url" id="giftUrl" placeholder="https://...">
-      </div>
-      <div style="display: flex; gap: 8px; margin-top: 16px;">
+
+      <div style="display: flex; gap: 8px; margin-top: 18px;">
         <button class="btn" style="background: #e2e8f0; flex: 1;" onclick="closeAddModal()">キャンセル</button>
         <button class="btn btn-primary" style="flex: 1;" onclick="saveYutai()">保存する</button>
       </div>
     </div>
   </div>
 
-  <canvas id="qrCanvas" style="display: none;"></canvas>
-
   <script>
-    const YUTAI_DB = {
-      '3197': { name: 'すかいらーくホールディングス', cat: '外食' },
-      '9861': { name: '吉野家ホールディングス', cat: '外食' },
-      '2702': { name: '日本マクドナルドHD', cat: '外食' },
-      '3048': { name: 'ビックカメラ', cat: '買い物' },
-      '8267': { name: 'イオン', cat: '買い物' },
-      '3387': { name: 'クリエイト・レストランツHD', cat: '外食' },
-      '3543': { name: 'コメダホールディングス', cat: '外食' },
-      '7616': { name: 'コロワイド', cat: '外食' },
-      '7550': { name: 'ゼンショーホールディングス', cat: '外食' },
-      '9202': { name: 'ANAホールディングス', cat: '旅行' },
-      '9201': { name: '日本航空（JAL）', cat: '旅行' }
-    };
-
-    let yutaiList = JSON.parse(localStorage.getItem('my_yutai_list_v1') || '[]');
-    let cameraStream = null;
-    let scanAnimId = null;
+    let walletList = JSON.parse(localStorage.getItem('my_yutai_wallet_data') || '[]');
 
     function saveToStorage() {
-      localStorage.setItem('my_yutai_list_v1', JSON.stringify(yutaiList));
+      localStorage.setItem('my_yutai_wallet_data', JSON.stringify(walletList));
       render();
     }
 
-    function handleCodeInput(val) {
+    // 全銘柄リアルタイム企業名検索（JSONP経由でCORSを完全回避）
+    let searchTimer = null;
+    function handleCodeChange(val) {
       const code = val.trim();
-      const msg = document.getElementById('codeDetectMsg');
-      if (YUTAI_DB[code]) {
-        document.getElementById('companyName').value = YUTAI_DB[code].name;
-        document.getElementById('category').value = YUTAI_DB[code].cat;
-        msg.style.display = 'block';
-        msg.textContent = '✓ ' + YUTAI_DB[code].name + ' を自動検出しました';
-        
-        const now = new Date();
-        const nextYear = new Date(now.getFullYear() + 1, now.getMonth() + 1, 0);
-        document.getElementById('expiry').value = nextYear.toISOString().split('T')[0];
+      const linksBox = document.getElementById('siteLinksBox');
+      const linkKabutan = document.getElementById('linkKabutan');
+      const linkYahoo = document.getElementById('linkYahoo');
+      const statusEl = document.getElementById('loadingStatus');
+
+      if (code.match(/^\d{4}$/)) {
+        // 1. 各サイトの直通優待リンクを即座に生成
+        linkKabutan.href = `https://kabutan.jp/stock/holder/?code=${code}`;
+        linkYahoo.href = `https://finance.yahoo.co.jp/quote/${code}.T`;
+        linksBox.style.display = 'block';
+
+        // 2. 東証全上場銘柄から企業名をリアルタイム自動取得
+        statusEl.style.display = 'block';
+        clearTimeout(searchTimer);
+        searchTimer = setTimeout(() => {
+          fetchStockName(code);
+        }, 300);
       } else {
-        msg.style.display = 'none';
+        linksBox.style.display = 'none';
+        statusEl.style.display = 'none';
       }
     }
 
+    // 全日本株の企業名取得（Yahoo!ファイナンス API）
+    function fetchStockName(code) {
+      const callbackName = 'stock_cb_' + Date.now();
+      window[callbackName] = function(data) {
+        document.getElementById('loadingStatus').style.display = 'none';
+        if (data && data.ResultSet && data.ResultSet.Result && data.ResultSet.Result.length > 0) {
+          const matched = data.ResultSet.Result.find(r => r.symbol === code || r.symbol.startsWith(code));
+          if (matched && matched.name) {
+            document.getElementById('name').value = matched.name;
+          }
+        }
+        delete window[callbackName];
+        const scriptEl = document.getElementById(callbackName);
+        if (scriptEl) scriptEl.remove();
+      };
+
+      const script = document.createElement('script');
+      script.id = callbackName;
+      script.src = `https://mfinance.yahoo.co.jp/service/autocomplete?query=${code}&callback=${callbackName}`;
+      script.onerror = function() {
+        document.getElementById('loadingStatus').style.display = 'none';
+        delete window[callbackName];
+        script.remove();
+      };
+      document.body.appendChild(script);
+    }
+
     function openAddModal() {
-      document.getElementById('secCode').value = '';
-      document.getElementById('companyName').value = '';
-      document.getElementById('balance').value = '';
+      document.getElementById('editId').value = '';
+      document.getElementById('code').value = '';
+      document.getElementById('name').value = '';
+      document.getElementById('category').value = '食事・飲食';
+      document.getElementById('amount').value = '';
+      document.getElementById('desc').value = '';
       document.getElementById('expiry').value = '';
-      document.getElementById('giftUrl').value = '';
-      document.getElementById('codeDetectMsg').style.display = 'none';
+      document.getElementById('location').value = '';
+      document.getElementById('siteLinksBox').style.display = 'none';
+      document.getElementById('loadingStatus').style.display = 'none';
       document.getElementById('addModal').style.display = 'flex';
     }
 
@@ -202,190 +242,149 @@
       document.getElementById('addModal').style.display = 'none';
     }
 
-    /* カメラ起動処理 */
-    async function openCameraModal() {
-      document.getElementById('cameraModal').style.display = 'flex';
-      const video = document.getElementById('cameraVideo');
-      try {
-        cameraStream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: 'environment' }
-        });
-        video.srcObject = cameraStream;
-        video.setAttribute('playsinline', true);
-        video.play();
-        requestAnimationFrame(tickScan);
-      } catch (err) {
-        alert('カメラの起動に失敗しました。カメラ権限を許可するか、下の「写真から読み取る」をご利用ください。');
-      }
-    }
-
-    function closeCameraModal() {
-      if (cameraStream) {
-        cameraStream.getTracks().forEach(track => track.stop());
-        cameraStream = null;
-      }
-      if (scanAnimId) cancelAnimationFrame(scanAnimId);
-      document.getElementById('cameraModal').style.display = 'none';
-    }
-
-    function tickScan() {
-      const video = document.getElementById('cameraVideo');
-      if (video.readyState === video.HAVE_ENOUGH_DATA) {
-        const canvas = document.getElementById('qrCanvas');
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-        const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-        const code = jsQR(imgData.data, imgData.width, imgData.height, {
-          inversionAttempts: "dontInvert"
-        });
-        if (code) {
-          closeCameraModal();
-          handleQrResult(code.data);
-          return;
-        }
-      }
-      scanAnimId = requestAnimationFrame(tickScan);
-    }
-
-    function handleImageQr(input) {
-      if (!input.files || !input.files[0]) return;
-      const file = input.files[0];
-      const img = new Image();
-      img.onload = function() {
-        const canvas = document.getElementById('qrCanvas');
-        canvas.width = img.width;
-        canvas.height = img.height;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0);
-        const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-        const code = jsQR(imgData.data, imgData.width, imgData.height);
-        if (code) {
-          closeCameraModal();
-          handleQrResult(code.data);
-        } else {
-          alert('画像からQRコードを検出できませんでした。');
-        }
-      };
-      img.src = URL.createObjectURL(file);
-    }
-
-    function handleQrResult(urlText) {
-      openAddModal();
-      document.getElementById('giftUrl').value = urlText;
-      for (const [code, info] of Object.entries(YUTAI_DB)) {
-        if (urlText.toLowerCase().includes(info.name.toLowerCase()) || urlText.includes(code)) {
-          document.getElementById('secCode').value = code;
-          handleCodeInput(code);
-          return;
-        }
-      }
+    function editYutai(id) {
+      const item = walletList.find(y => y.id === id);
+      if (!item) return;
+      document.getElementById('editId').value = item.id;
+      document.getElementById('code').value = item.code || '';
+      document.getElementById('name').value = item.name;
+      document.getElementById('category').value = item.category;
+      document.getElementById('amount').value = item.amount || '';
+      document.getElementById('desc').value = item.desc;
+      document.getElementById('expiry').value = item.expiry || '';
+      document.getElementById('location').value = item.location || '';
+      handleCodeChange(item.code || '');
+      document.getElementById('addModal').style.display = 'flex';
     }
 
     function saveYutai() {
-      const name = document.getElementById('companyName').value.trim();
-      const balance = parseInt(document.getElementById('balance').value, 10);
-      const expiry = document.getElementById('expiry').value;
+      const editId = document.getElementById('editId').value;
+      const code = document.getElementById('code').value.trim();
+      const name = document.getElementById('name').value.trim();
       const category = document.getElementById('category').value;
-      const giftUrl = document.getElementById('giftUrl').value.trim();
+      const amount = parseFloat(document.getElementById('amount').value) || 0;
+      const desc = document.getElementById('desc').value.trim();
+      const expiry = document.getElementById('expiry').value;
+      const location = document.getElementById('location').value.trim();
 
-      if (!name || isNaN(balance) || !expiry) {
-        alert('企業名、金額、有効期限を正しく入力してください。');
+      if (!name) {
+        alert('企業名または銘柄名を入力してください。');
         return;
       }
 
-      yutaiList.push({
-        id: Date.now().toString(),
-        name,
-        balance,
-        expiry,
-        category,
-        giftUrl
-      });
+      if (editId) {
+        const idx = walletList.findIndex(y => y.id === editId);
+        if (idx !== -1) {
+          walletList[idx] = { ...walletList[idx], code, name, category, amount, desc, expiry, location };
+        }
+      } else {
+        walletList.push({
+          id: Date.now().toString(),
+          code, name, category, amount, desc, expiry, location,
+          isUsed: false
+        });
+      }
 
       saveToStorage();
       closeAddModal();
     }
 
+    function toggleUsed(id) {
+      const item = walletList.find(y => y.id === id);
+      if (item) {
+        item.isUsed = !item.isUsed;
+        saveToStorage();
+      }
+    }
+
     function deleteYutai(id) {
-      yutaiList = yutaiList.filter(item => item.id !== id);
-      saveToStorage();
+      if (confirm('この優待を削除しますか？')) {
+        walletList = walletList.filter(y => y.id !== id);
+        saveToStorage();
+      }
+    }
+
+    function clearAllYutai() {
+      if (confirm('すべての登録データを初期化しますか？')) {
+        walletList = [];
+        saveToStorage();
+      }
     }
 
     function render() {
-      const content = document.getElementById('contentArea');
-      let total = 0;
-      let expiring = 0;
+      const grid = document.getElementById('yutaiGrid');
+      grid.innerHTML = '';
+
+      let totalAmount = 0;
+      let activeCount = 0;
+      let expiringCount = 0;
+
       const today = new Date();
-      today.setHours(0,0,0,0);
-      const in30Days = new Date(today.getTime() + 30 * 24 * 60 * 60 * 1000);
+      const sixtyDaysLater = new Date();
+      sixtyDaysLater.setDate(today.getDate() + 60);
 
-      yutaiList.forEach(item => {
-        total += item.balance;
-        const expDate = new Date(item.expiry);
-        if (expDate >= today && expDate <= in30Days) {
-          expiring += item.balance;
+      walletList.forEach(item => {
+        let isExpiringSoon = false;
+        let isExpired = false;
+
+        if (item.expiry) {
+          const expDate = new Date(item.expiry);
+          if (expDate < today) {
+            isExpired = true;
+          } else if (expDate <= sixtyDaysLater) {
+            isExpiringSoon = true;
+          }
         }
-      });
 
-      document.getElementById('totalBalance').textContent = total.toLocaleString() + ' 円';
-      document.getElementById('expiringBalance').textContent = expiring.toLocaleString() + ' 円';
+        if (!item.isUsed) {
+          activeCount++;
+          totalAmount += (item.amount || 0);
+          if (isExpiringSoon) expiringCount++;
+        }
 
-      if (yutaiList.length === 0) {
-        content.innerHTML = `
-          <div class="empty-state">
-            <h3 style="font-size: 1rem; margin-bottom: 6px;">保有している優待がありません</h3>
-            <p>お手持ちの食事券やQR通知を登録して始めましょう</p>
-            <div class="empty-actions">
-              <button class="btn btn-qr" style="padding: 10px;" onclick="openCameraModal()">📷 QRカメラで読み取る</button>
-              <button class="btn btn-primary" onclick="openAddModal()">＋ 手動で追加する</button>
+        const kabutanUrl = item.code ? `https://kabutan.jp/stock/holder/?code=${item.code}` : '#';
+
+        const card = document.createElement('div');
+        card.className = `yutai-card ${item.isUsed ? 'used' : ''}`;
+        card.innerHTML = `
+          <div class="card-head">
+            <div>
+              <span class="card-name">${item.name}</span>
+              ${item.code ? `<span class="card-code">(${item.code})</span>` : ''}
             </div>
+            <span class="badge badge-category">${item.category}</span>
+          </div>
+          <div class="card-desc">${item.desc || '（内容未記入）'}</div>
+          <div class="card-meta">
+            <span>残額: <strong>${item.amount ? item.amount.toLocaleString() + ' 円' : '-'}</strong></span>
+            <span>
+              ${item.expiry ? `期限: ${item.expiry} ` : '期限なし'}
+              ${item.isUsed ? '<span class="badge" style="background:#cbd5e1;">使用済</span>' : 
+                isExpired ? '<span class="badge badge-alert">期限切れ</span>' : 
+                isExpiringSoon ? '<span class="badge badge-alert">まもなく期限</span>' : 
+                '<span class="badge badge-ok">有効</span>'}
+            </span>
+          </div>
+          ${item.location ? `<div style="font-size: 0.75rem; color: var(--text-sub); margin-bottom: 8px;">📍 保管場所: ${item.location}</div>` : ''}
+          <div class="card-actions">
+            ${item.code ? `
+              <a href="${kabutanUrl}" target="_blank" rel="noopener noreferrer" class="site-link" style="margin-right: auto;">
+                🔍 優待詳細 ↗
+              </a>
+            ` : ''}
+            <button class="btn btn-sm" style="background: ${item.isUsed ? '#e2e8f0' : '#dcfce7'}; color: ${item.isUsed ? '#64748b' : '#15803d'};" onclick="toggleUsed('${item.id}')">
+              ${item.isUsed ? '未使用に戻す' : '✓ 使用済にする'}
+            </button>
+            <button class="btn btn-sm" style="background: #e2e8f0;" onclick="editYutai('${item.id}')">編集</button>
+            <button class="btn btn-sm btn-danger" onclick="deleteYutai('${item.id}')">削除</button>
           </div>
         `;
-        return;
-      }
-
-      const sorted = [...yutaiList].sort((a, b) => new Date(a.expiry) - new Date(b.expiry));
-      const groups = {};
-
-      sorted.forEach(item => {
-        const d = new Date(item.expiry);
-        const key = d.getFullYear() + '年' + (d.getMonth() + 1) + '月末 期限';
-        if (!groups[key]) groups[key] = [];
-        groups[key].push(item);
+        grid.appendChild(card);
       });
 
-      let html = '';
-      for (const [key, items] of Object.entries(groups)) {
-        const groupTotal = items.reduce((sum, i) => sum + i.balance, 0);
-        const isAlert = items.some(i => new Date(i.expiry) <= in30Days);
-
-        html += `
-          <div class="group-block">
-            <div class="group-header ${isAlert ? 'alert' : ''}">
-              <span>📅 ${key} (${items.length}件)</span>
-              <span>合計: ${groupTotal.toLocaleString()} 円</span>
-            </div>
-            ${items.map(item => `
-              <div class="yutai-card">
-                <div class="yutai-info">
-                  <h3>${item.name} <span class="badge">${item.category}</span></h3>
-                  <div class="yutai-meta">期限: ${item.expiry}</div>${item.giftUrl ? `<a href="${item.giftUrl}" target="_blank" style="font-size: 0.8rem; color: #2563eb; text-decoration: none; display: inline-block; margin-top: 3px;">🔗 ギフト画面を開く</a>` : ''}
-                </div>
-                <div class="yutai-actions">
-                  <div class="yutai-balance">
-                    <strong>${item.balance.toLocaleString()} 円</strong>
-                  </div>
-                  <button class="btn btn-sm btn-delete" onclick="deleteYutai('${item.id}')">× 削除</button>
-                </div>
-              </div>
-            `).join('')}
-          </div>
-        `;
-      }
-
-      content.innerHTML = html;
+      document.getElementById('activeCount').textContent = activeCount + ' 件';
+      document.getElementById('totalAmount').textContent = totalAmount.toLocaleString() + ' 円';
+      document.getElementById('expiringCount').textContent = expiringCount + ' 件';
     }
 
     render();
